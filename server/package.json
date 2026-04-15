@@ -1,0 +1,25 @@
+{
+  "name": "te",
+  "version": "1.0.0",
+  "description": "This is the backend side of Teacher Emmy's student management system",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bolice1/TE.git"
+  },
+  "keywords": [
+    "marks",
+    "students",
+    "discipline",
+    "courses"
+  ],
+  "author": "KOMEZUSENGE Bolice",
+  "license": "UNLICENCED",
+  "bugs": {
+    "url": "https://github.com/Bolice1/TE/issues"
+  },
+  "homepage": "https://github.com/Bolice1/TE#readme"
+}
