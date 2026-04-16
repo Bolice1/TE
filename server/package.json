@@ -21,5 +21,16 @@
   "bugs": {
     "url": "https://github.com/Bolice1/TE/issues"
   },
-  "homepage": "https://github.com/Bolice1/TE#readme"
+  "homepage": "https://github.com/Bolice1/TE#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mongoose": "^9.4.1",
+    "nodemailer": "^8.0.5",
+    "pdfkit": "^0.18.0",
+    "puppeteer": "^24.41.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/nodemailer": "^8.0.0"
+  }
 }

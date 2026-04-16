@@ -1,1 +1,17 @@
 .env
+node_modules/
+dist/
+logs/
+coverage/
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.pem
+*.key   
+*.log
+*.pid
+*.seed
+*.pid.lock
+*.tgz
+*.gz
