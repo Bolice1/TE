@@ -49,6 +49,11 @@ const studentSchema = new mongoose.Schema({
         ref: "Payment",
         type: String,
         unique: true
+    },
+    studentId:{
+        type: Number,
+        unique: true,
+        required: true
     }
 
 })
