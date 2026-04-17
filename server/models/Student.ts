@@ -17,7 +17,7 @@ const studentSchema = new mongoose.Schema({
                 unique: true
             }
         },
-        mather: {
+        mother: {
             name: {
                 type: String,
                 required: true,
