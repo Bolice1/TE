@@ -12,7 +12,7 @@ const studentSchema = new mongoose.Schema({
                 required: true
             },
             phoneNumber: {
-                type: Number,
+                type: String,
                 required: true,
                 unique: true
             }
@@ -23,7 +23,7 @@ const studentSchema = new mongoose.Schema({
                 required: true,
             },
             phoneNumber: {
-                type: Number,
+                type: String,
                 required: true,
                 unique: true
             }
@@ -34,11 +34,6 @@ const studentSchema = new mongoose.Schema({
         unique: false,
         required: true
 
-    },
-    StudentId:{
-        type: Number,
-        unique: true,
-        required: true
     }
 
 })
