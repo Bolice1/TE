@@ -65,6 +65,7 @@ export const loginTeacher = async (req: Request, res: Response) => {
 // let us deal with students', students won't login , its' just for teacher to manage them
 
 const createStudent = async (req: Request, res: Response) => {
+    try {
     const { firstName, lastName, studentId } = req.body;
     // does't he / she exists
     const exists = await Student.findOne({ studentId });
@@ -73,16 +74,19 @@ const createStudent = async (req: Request, res: Response) => {
         return res.status(400).json({ msg: "The student you want to create already exists!" })
     }
     // let us hash the studen id 
-    const hashedPassword = await bcrypt.hash(studentId, 10);
+    const hashedStudentId = await bcrypt.hash(studentId, 10);
     // let us create a new student 
     const newStudent = await new Student({
         firstName,
         lastName,
-        studentId,
-        password: hashedPassword
+        studentId: hashedStudentId,
     }).save()
 
     res.status(201).json({ msg: "Student created successfully", student: newStudent 
         
     })
+    } catch (error) {
+        console.error('Error creating student:', error)
+        res.status(500).json({ message: 'Server error' })
+    }
 }

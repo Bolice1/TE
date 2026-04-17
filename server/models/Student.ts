@@ -15,11 +15,6 @@ const studentSchema = new mongoose.Schema({
                 type: Number,
                 required: true,
                 unique: true
-            },
-            emailAddress: {
-                type: String,
-                required: false,
-                unique: true
             }
         },
         mather: {
@@ -29,11 +24,6 @@ const studentSchema = new mongoose.Schema({
             },
             phoneNumber: {
                 type: Number,
-                required: true,
-                unique: true
-            },
-            emailAddress: {
-                type: String,
                 required: true,
                 unique: true
             }
