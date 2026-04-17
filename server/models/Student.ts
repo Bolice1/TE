@@ -35,12 +35,7 @@ const studentSchema = new mongoose.Schema({
         required: true
 
     },
-    payments:{
-        ref: "Payment",
-        type: String,
-        unique: true
-    },
-    studentId:{
+    StudentId:{
         type: Number,
         unique: true,
         required: true
