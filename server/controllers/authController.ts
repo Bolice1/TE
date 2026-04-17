@@ -1,5 +1,5 @@
-import * as Student from '../models/Student'
-import * as Teacher from '../models/Teacher'
+import { Student } from '../models/Student'
+import { Teacher } from '../models/Teacher'
 import * as bcrypt from 'bcrypt'
 import * as jwt from 'jsonwebtoken'
 import { Request, Response } from 'express'
@@ -64,8 +64,25 @@ export const loginTeacher = async (req: Request, res: Response) => {
 
 // let us deal with students', students won't login , its' just for teacher to manage them
 
-export const createStudent = async (req: Request, res: Response) => {
-    try {
-        const {f
-    }
+const createStudent = async (req: Request, res: Response) => {
+    const { firstName, lastName, studentId } = req.body;
+    // does't he / she exists
+    const exists = await Student.findOne({ studentId });
 
+    if (exists) {
+        return res.status(400).json({ msg: "The student you want to create already exists!" })
+    }
+    // let us hash the studen id 
+    const hashedPassword = await bcrypt.hash(studentId, 10);
+    // let us create a new student 
+    const newStudent = await new Student({
+        firstName,
+        lastName,
+        studentId,
+        password: hashedPassword
+    }).save()
+
+    res.status(201).json({ msg: "Student created successfully", student: newStudent 
+        
+    })
+}
