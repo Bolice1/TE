@@ -9,69 +9,23 @@ const { env } = require('../config/env')
 
 export const registerTeacher = async (req: Request, res: Response) => {
     try {
-        const { name, email, password } = req.body
-
-        // check if the teacher already exists
-        const existingTeacher = await Teacher.findOne({ email })
+        const existingTeacher = await Teacher.findOne({ email: req.body.email })
         if (existingTeacher) {
-            return res.status(400).json({ message: 'Teacher already exists' })
+            return res.status(400).json({ message: 'Teacher with this email already exists' })
         }
 
         // hash the password
-        const hashedPassword = await bcrypt.hash(password, 10)
+        const salt = await bcrypt.genSalt(10)
+        const hashedPassword = await bcrypt.hash(req.body.password, salt)
 
         // create a new teacher
-        const newTeacher = new Teacher({
-            name,
-            email,
+        const teacher = await Teacher.create({
+            ...req.body,
             password: hashedPassword
         })
 
-        await newTeacher.save()
+        res.status(201).json({ message: 'Teacher registered successfully', teacher })
 
-        res.status(201).json({ message: 'Teacher registered successfully' })
-    } catch (error) {
-        console.error('Error registering teacher:', error)
-        res.status(500).json({ message: 'Server error' })
-    }
-}
-
-export const loginTeacher = async (req: Request, res: Response) => {
-    try {
-        const { email, password } = req.body
-
-        // check if the teacher exists
-        const teacher = await Teacher.findOne({ email })
-        if (!teacher) {
-            return res.status(400).json({ message: 'Invalid credentials' })
-        }
-
-        // compare the password
-        const isMatch = await bcrypt.compare(password, teacher.password)
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' })
-        }
-
-        // create a JWT token
-        const token = jwt.sign({ id: teacher._id }, env.jwt_secret as string, { expiresIn: env.jwt_expires_in })
-
-        res.json({ token })
-    } catch (error) {
-        console.error('Error logging in teacher:', error)
-        res.status(500).json({ message: 'Server error' })
-    }
-}
-
-// let us deal with students', students won't login , its' just for teacher to manage them
-
-// CREATE student
-export const createStudent = async (req: Request, res: Response) => {
-    try {
-        const student = await Student.create(req.body);
-        return res.status(201).json({
-            success: true,
-            data: student
-        });
     } catch (error: any) {
         if (error.code === 11000) {
             return res.status(400).json({
@@ -81,109 +35,167 @@ export const createStudent = async (req: Request, res: Response) => {
         }
 
         return res.status(500).json({
-            message: "Failed to create student",
+            message: "Failed to create teacher",
             error: error.message
         });
     }
-};
+    export const loginTeacher = async (req: Request, res: Response) => {
+        try {
+            const { email, password } = req.body
 
-// GET all students
-export const getStudents = async (_req: Request, res: Response) => {
-    try {
-        const students = await Student.find();
-
-        return res.status(200).json({
-            success: true,
-            count: students.length,
-            data: students
-        });
-    } catch (error: any) {
-        return res.status(500).json({
-            message: "Failed to fetch students",
-            error: error.message
-        });
-    }
-};
-
-// GET single student by ID
-export const getStudentById = async (req: Request, res: Response) => {
-    try {
-        const student = await Student.findById(req.params.id);
-
-        if (!student) {
-            return res.status(404).json({
-                message: "Student not found"
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            data: student
-        });
-    } catch (error: any) {
-        return res.status(500).json({
-            message: "Error fetching student",
-            error: error.message
-        });
-    }
-};
-
-// UPDATE student
-export const updateStudent = async (req: Request, res: Response) => {
-    try {
-        const student = await Student.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            {
-                new: true,
-                runValidators: true
+            // check if the teacher exists
+            const teacher = await Teacher.findOne({ email })
+            if (!teacher) {
+                return res.status(400).json({ message: 'Invalid credentials' })
             }
-        );
 
-        if (!student) {
-            return res.status(404).json({
-                message: "Student not found"
-            });
+            // compare the password
+            const isMatch = await bcrypt.compare(password, teacher.password)
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Invalid credentials' })
+            }
+
+            // create a JWT token
+            const token = jwt.sign({ id: teacher._id }, env.jwt_secret as string, { expiresIn: env.jwt_expires_in })
+
+            res.json({ token })
+        } catch (error) {
+            console.error('Error logging in teacher:', error)
+            res.status(500).json({ message: 'Server error' })
         }
-
-        return res.status(200).json({
-            success: true,
-            data: student
-        });
-    } catch (error: any) {
-        if (error.code === 11000) {
-            return res.status(400).json({
-                message: "Duplicate field value",
-                field: error.keyValue
-            });
-        }
-
-        return res.status(500).json({
-            message: "Failed to update student",
-            error: error.message
-        });
     }
-};
 
-// DELETE student
-export const deleteStudent = async (req: Request, res: Response) => {
-    try {
-        const student = await Student.findByIdAndDelete(req.params.id);
+    // let us deal with students', students won't login , its' just for teacher to manage them
 
-        if (!student) {
-            return res.status(404).json({
-                message: "Student not found"
+    // CREATE student
+    export const createStudent = async (req: Request, res: Response) => {
+        try {
+            // does the student already exists ? 
+            const existingStudent = await Student.findOne({ studentId: req.body.studentId });
+            if (existingStudent) {
+                return res.status(400).json({
+                    message: "Student with this ID already exists"
+                });
+            }
+            // create a new student 
+            const student = await Student.create(req.body);
+            return res.status(201).json({
+                success: true,
+                data: student
+            });
+        } catch (error: any) {
+            if (error.code === 11000) {
+                return res.status(400).json({
+                    message: "Duplicate field value",
+                    field: error.keyValue
+                });
+            }
+
+            return res.status(500).json({
+                message: "Failed to create student",
+                error: error.message
             });
         }
+    };
 
-        return res.status(200).json({
-            success: true,
-            message: "Student deleted successfully"
-        });
-    } catch (error: any) {
-        return res.status(500).json({
-            message: "Failed to delete student",
-            error: error.message
-        });
-    }
-};
+    // GET all students
+    export const getStudents = async (_req: Request, res: Response) => {
+        try {
+            const students = await Student.find();
+
+            return res.status(200).json({
+                success: true,
+                count: students.length,
+                data: students
+            });
+        } catch (error: any) {
+            return res.status(500).json({
+                message: "Failed to fetch students",
+                error: error.message
+            });
+        }
+    };
+
+    // GET single student by ID
+    export const getStudentById = async (req: Request, res: Response) => {
+        try {
+            const student = await Student.findById(req.params.id);
+
+            if (!student) {
+                return res.status(404).json({
+                    message: "Student not found"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                data: student
+            });
+        } catch (error: any) {
+            return res.status(500).json({
+                message: "Error fetching student",
+                error: error.message
+            });
+        }
+    };
+
+    // UPDATE student
+    export const updateStudent = async (req: Request, res: Response) => {
+        try {
+            const student = await Student.findByIdAndUpdate(
+                req.params.id,
+                req.body,
+                {
+                    new: true,
+                    runValidators: true
+                }
+            );
+
+            if (!student) {
+                return res.status(404).json({
+                    message: "Student not found"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                data: student
+            });
+        } catch (error: any) {
+            if (error.code === 11000) {
+                return res.status(400).json({
+                    message: "Duplicate field value",
+                    field: error.keyValue
+                });
+            }
+
+            return res.status(500).json({
+                message: "Failed to update student",
+                error: error.message
+            });
+        }
+    };
+
+    // DELETE student
+    export const deleteStudent = async (req: Request, res: Response)
+        => {
+        try {
+            const student = await Student.findByIdAndDelete(req.params.id);
+
+            if (!student) {
+                return res.status(404).json({
+                    message: "Student not found"
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Student deleted successfully"
+            });
+        } catch (error: any) {
+            return res.status(500).json({
+                message: "Failed to delete student",
+                error: error.message
+            });
+        }
+    };
