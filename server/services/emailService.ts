@@ -57,3 +57,22 @@ export const sendPaymentReminderToparents = async (to: string, subject: string, 
     }
 }
 
+export const sendToAllTeachers = async (subject: string, text: string) => {
+    // here we will fetch all teachers from the database and send them an email, for now we will just log the email content
+    const mailOptions = {
+        from: env.email_user,
+        to: 'all teachers',
+        subject,
+        text: `
+        Muraho neza,
+
+        Twifuzaga kubamenyesha ko hari amakuru mashya. Dore ibisobanuro:
+        ${text}
+
+        Murakoze,
+        System ya TE
+        `
+    };
+    console.log(`Sending email to all teachers with subject: ${subject} and text: ${text}`)
+}   
+

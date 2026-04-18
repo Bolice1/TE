@@ -5,6 +5,9 @@ import { getMarksByStudent, createMarks,getTotalmarksforateacher,getAverageMarks
 const router = Router();
 
 // here we will have routes for teachers to manage their students, view their marks, etc. but they will not have access to all students and teachers in the system, only those in their class
-route
+router.get('/marks/student/:studentId', getMarksByStudent);
+router.post('/marks', createMarks);
+router.get('/marks/teacher/:teacherId/total', getTotalmarksforateacher);
+router.get('/marks/subject/:subjectId/average', getAverageMarksForSubject);
 
 export default router;  
