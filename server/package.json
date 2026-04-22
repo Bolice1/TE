@@ -15,15 +15,18 @@
     "marks",
     "students"
   ],
-  "dependencies":{
-
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express-rate-limit": "^8.3.2",
     "express-validator": ""
-
   },
   "author": "KOMEZUSENGE Bolice",
   "license": "UNLICENCED",
   "bugs": {
     "url": "https://github.com/Bolice1/TE/issues"
   },
-  "homepage": "https://github.com/Bolice1/TE#readme"
+  "homepage": "https://github.com/Bolice1/TE#readme",
+  "devDependencies": {
+    "@types/cors": "^2.8.19"
+  }
 }

@@ -10,7 +10,8 @@ export const env = {
     emailSecure: process.env.email_secure as string,
     emailservice: process.env.email_service as string,
     emailPort: process.env.email_port as string,
-    forntendUrl: process.env.frontend_url as string
+    forntendUrl: process.env.frontend_url as string,
+    PORT: process.env.backend_port
 
 }
 
