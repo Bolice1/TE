@@ -9,7 +9,8 @@ export const env = {
     emailPass: process.env.email_pass as string,
     emailSecure: process.env.email_secure as string,
     emailservice: process.env.email_service as string,
-    emailPort: process.env.email_port as string
+    emailPort: process.env.email_port as string,
+    forntendUrl: process.env.frontend_url as string
 
 }
 
