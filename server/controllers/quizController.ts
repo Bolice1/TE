@@ -1,4 +1,4 @@
-import Quiz from '../model/Quiz'
+import Quiz from '../model/Quiz.js'
 import { Request, Response } from 'express'
 
 

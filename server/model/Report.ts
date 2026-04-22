@@ -17,4 +17,4 @@ const reportCardSchema = new mongoose.Schema({
     }
 })
 
-export default mongoose.model("ReportCard", reportCardSchema)
+export default mongoose.model("Report", reportCardSchema)

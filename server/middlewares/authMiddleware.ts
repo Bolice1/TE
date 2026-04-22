@@ -1,5 +1,5 @@
 import {Request, Response, NextFunction} from 'express'
-import Teacher from '../model/Teacher'
+import Teacher from '../model/Teacher.js'
 
 export const isAregisteredTeacher = async(req: Request, res: Response, next: NextFunction)=>{
 

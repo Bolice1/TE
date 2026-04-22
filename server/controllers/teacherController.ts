@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import Teacher from '../model/Teacher'
+import Teacher from '../model/Teacher.js'
 
 
 export const registerTeacher = async (req: Request, res: Response)=>{
