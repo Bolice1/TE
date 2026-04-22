@@ -1,0 +1,11 @@
+#dependencies 
+node_modules/
+
+#env variables 
+.env 
+*.env
+.env.*
+# os and IDE 
+.vscode/
+#compilation
+dist/
