@@ -1,0 +1,43 @@
+{
+  "name": "te",
+  "version": "1.0.0",
+  "description": "This is a secure platform for Teacher Emmy's company ",
+  "keywords": [
+    "Just",
+    "teaching",
+    "Marks",
+    "Students",
+    "Report",
+    "cards"
+  ],
+  "homepage": "https://github.com/Bolice1/TE#readme",
+  "bugs": {
+    "url": "https://github.com/Bolice1/TE/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bolice1/TE.git"
+  },
+  "license": "UNLICENSED",
+  "author": "KOMEZUSENGE Bolice",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.4.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.6.1",
+    "nodemailer": "^8.0.7",
+    "nodemon": "^3.1.14",
+    "tsc-config": "^0.0.1",
+    "typescript": "^6.0.3",
+  }
+}
