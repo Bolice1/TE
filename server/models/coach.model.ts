@@ -1,7 +1,6 @@
 import mongoose from 'mongoose'
-import { string } from '../config/env'
 
-export const teacherModel = new mongoose.Schema({
+export const coachModel = new mongoose.Schema({
     name: {
         type: String,
         required: true,
@@ -20,8 +19,14 @@ export const teacherModel = new mongoose.Schema({
     coachingName: {
         required: true,
         unique: true,
-        type: string
+        type: String
+    },
+    password:{
+        required: true,
+        unique: true,
+        type: String
     }
 })
 
-const TeacherSchema = 
+const Coach = mongoose.model('Coach', coachModel)
+export default Coach;
