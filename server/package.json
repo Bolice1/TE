@@ -29,6 +29,7 @@
     "test": "npm run build"
   },
   "dependencies": {
+    "@types/node": "^25.9.1",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
@@ -51,7 +52,6 @@
     "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
     "tsx": "^4.20.6"
   }
 }
