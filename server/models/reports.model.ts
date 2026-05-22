@@ -13,6 +13,17 @@ export const reportsModel = new mongoose.Schema({
         type: String,
         required: true,
         unique: true
+    },
+    isDeleted: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
+    
+    deletedAt: {
+        type: Date,
+        required: false,
+        default: null
     }
 })
 

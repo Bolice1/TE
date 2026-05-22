@@ -15,28 +15,39 @@ export const assignmentSchema = new mongoose.Schema({
         required: true,
         unique: false
     },
-    participantsNumber:{
+    participantsNumber: {
         type: Number,
         required: true,
         unique: false
     },
-    participants:{
+    participants: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Student'
     },
-    coach:{
+    coach: {
         type: mongoose.Schema.Types.ObjectId,
-        ref:'Teacher'
+        ref: 'Teacher'
     },
-    max:{
+    max: {
         type: String,
         required: true,
         unique: false
     },
-    min:{
+    min: {
         type: String,
         required: true,
         unique: false
+    },
+    isDeleted: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
+
+    deletedAt: {
+        type: Date,
+        required: false,
+        default: null
     }
 })
 

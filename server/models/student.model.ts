@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { time } from "node:console";
 
 export const studentSchema = new mongoose.Schema({
     name: {
@@ -20,6 +21,17 @@ export const studentSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: false
+    },
+    isDeleted: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
+    
+    deletedAt: {
+        type: Date,
+        required: false,
+        default: null
     }
 })
 

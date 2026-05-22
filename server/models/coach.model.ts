@@ -21,10 +21,21 @@ export const coachModel = new mongoose.Schema({
         unique: true,
         type: String
     },
-    password:{
+    password: {
         required: true,
         unique: true,
         type: String
+    },
+    isDeleted: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
+
+    deletedAt: {
+        type: Date,
+        required: false,
+        default: null
     }
 })
 

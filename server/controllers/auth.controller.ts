@@ -5,7 +5,6 @@ import jwt from 'jsonwebtoken'
 import envConfiguration from '../config/env.js';
 
 
-// let us make a function for usable otp generation 
 
 
 export const registerCoach = async (req: Request, res: Response) => {
@@ -17,11 +16,9 @@ export const registerCoach = async (req: Request, res: Response) => {
         if (!address) return res.status(400).json({ msg: "Address is required" })
         if (!password) return res.status(400).json({ msg: "Password required" })
 
-        // check if the user doesn't exist 
         const existingUser = await Coach.findOne({ email: email });
         if (existingUser) return res.status(400).json({ msg: "User already exists" })
         const hashedPassword = await bcrypt.hash(password, 10);
-        // save new user 
         const newCoach = await Coach.create({
             email,
             name,
@@ -90,8 +87,59 @@ export const login = async (req: Request, res: Response) => {
 
 export const update = async (req: Request, res: Response) => {
     const { name, email, coachingName, address } = req.body;
-    if (!name && !email && !coachingName && !address) return res.status(400).json({ msg: "Nothing provided for update" })
+    if (!email) return res.status(401).json({ msg: "Email is required for update" })
 
-    // sent token to email 
+    if (!name && !coachingName && !address) {
+        return res.status(400).json({ msg: "Nothing provided for update" });
+    }
 
-}
+    try {
+        const updatedProfile = await Coach.findOneAndUpdate(
+            { email },
+            { $set: { name, coachingName, address } },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedProfile) {
+            return res.status(404).json({ msg: "Coach not found" });
+        }
+
+        return res.status(200).json(updatedProfile);
+    } catch (error) {
+        return res.status(500).json({ msg: "something went wrong" });
+    }
+};
+
+export const deleteProfile = async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+
+        const deleteUser = await Coach.findOneAndUpdate(
+            { email },
+            {
+                $set: {
+                    isDeleted: true,
+                    deletedAt: new Date()
+                }
+            },
+            { new: true }
+        );
+
+        if (!deleteUser) {
+            return res.status(404).json({
+                msg: "Coach not found"
+            });
+        }
+
+        return res.status(200).json({
+            msg: "Profile deleted successfully",
+            deleteUser
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            msg: "Server error",
+            error
+        });
+    }
+};
