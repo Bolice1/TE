@@ -20,7 +20,7 @@ import {
 
 export default function AssignmentsPage() {
   const queryClient = useQueryClient();
-  const { academicYear, className } = useFilters();
+  const { academicYear, className, availableClasses } = useFilters();
   const [activeTab, setActiveTab] = useState<"schedule" | "create-assignment" | "courses">("schedule");
 
   // State for Course Form
@@ -29,6 +29,7 @@ export default function AssignmentsPage() {
   const [courseOutcome, setCourseOutcome] = useState("");
   const [courseDesc, setCourseDesc] = useState("");
   const [periods, setPeriods] = useState("3");
+  const [courseClassName, setCourseClassName] = useState(className || "S1");
 
   // State for Assignment Form
   const [selectedCourseId, setSelectedCourseId] = useState("");
@@ -66,6 +67,7 @@ export default function AssignmentsPage() {
       setCourseCode("");
       setCourseOutcome("");
       setCourseDesc("");
+      setPeriods("3");
       setFormSuccess("Course created successfully!");
     },
     onError: (err: any) => {
@@ -111,10 +113,14 @@ export default function AssignmentsPage() {
       setFormError("Name, Learning Outcome and Periods per week are required.");
       return;
     }
+    if (!courseClassName) {
+      setFormError("Please choose the class this course belongs to.");
+      return;
+    }
     createCourseMutation.mutate({
       name: courseName,
       code: courseCode || undefined,
-      className: className || "S1", // Default to current filter class or S1
+      className: courseClassName,
       year: academicYear,
       outcome: courseOutcome,
       description: courseDesc || undefined,
@@ -273,8 +279,18 @@ export default function AssignmentsPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20 text-muted-text text-sm">
-                No planned assessments found. Schedule an assessment to get started.
+              <div className="text-center py-20 text-muted-text text-sm space-y-4">
+                <p>No planned assessments found. Schedule an assessment to get started.</p>
+                {courses.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("courses")}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white shadow shadow-primary/15"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create Your First Course</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -313,6 +329,22 @@ export default function AssignmentsPage() {
       {activeTab === "create-assignment" && (
         <div className="bg-surface border border-border p-8 rounded-2xl shadow-sm max-w-3xl">
           <h3 className="text-lg font-bold text-foreground mb-6">Plan Assessment Task</h3>
+          {courses.length === 0 && (
+            <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+              <p className="font-semibold">Create a course first before planning assessments.</p>
+              <p className="mt-1 text-xs text-muted-text">
+                Courses belong to a teacher and class workspace. Once a course is created, it will appear here for assignment planning.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveTab("courses")}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white shadow shadow-primary/15"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Go To Course Setup</span>
+              </button>
+            </div>
+          )}
           <form onSubmit={handleCreateAssignmentSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -586,14 +618,22 @@ export default function AssignmentsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-foreground mb-1.5 uppercase">
                     Class Target
                   </label>
-                  <div className="py-2.5 px-3 bg-background border border-border rounded-xl text-sm font-semibold text-muted-text">
-                    Class {className || "S1"}
-                  </div>
+                  <select
+                    value={courseClassName}
+                    onChange={(e) => setCourseClassName(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-semibold text-foreground focus:outline-none"
+                  >
+                    {availableClasses.map((cls) => (
+                      <option key={cls} value={cls}>
+                        Class {cls}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

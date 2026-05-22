@@ -155,7 +155,7 @@ function ToastItem({ toast }: { toast: Toast }) {
         {toast.action && (
           <button
             onClick={toast.action.onClick}
-            className="text-xs font-medium text-primary hover:underline mt-2"
+            className="mt-2 text-xs font-medium text-primary hover:underline"
           >
             {toast.action.label}
           </button>
@@ -163,7 +163,8 @@ function ToastItem({ toast }: { toast: Toast }) {
       </div>
       <button
         onClick={() => dismiss(toast.id)}
-        className="flex-shrink-0 text-muted-text hover:text-foreground transition-colors"
+        aria-label="Dismiss notification"
+        className="flex-shrink-0 rounded-md p-1 text-muted-text hover:bg-background hover:text-foreground transition-colors"
       >
         <X className="w-4 h-4" />
       </button>

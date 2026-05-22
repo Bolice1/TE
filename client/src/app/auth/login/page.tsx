@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
-import { Loader2, Lock, Mail, Sparkles } from "lucide-react";
+import { Loader2, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
   const { login, isLoggingIn } = useAuth(false);
@@ -33,15 +33,11 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-3">
-            <Sparkles className="w-4 h-4 animate-pulse" />
-            <span>Academic Intelligence Platform</span>
-          </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground font-display">
             TE<span className="text-primary font-normal"> (Teacher Emmy)</span>
           </h1>
           <p className="text-muted-text mt-2 text-sm">
-            Empowering educators with Rwanda CBC-aligned data insights.
+            Sign in to your teacher workspace.
           </p>
         </div>
 
@@ -66,6 +62,8 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="teacher@school.rw"
+                  autoComplete="email"
+                  autoFocus
                   disabled={isLoggingIn}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all"
                   required
@@ -84,6 +82,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
+                  autoComplete="current-password"
                   disabled={isLoggingIn}
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all"
                   required

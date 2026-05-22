@@ -59,12 +59,15 @@ export function useAuth(requireAuth = true) {
     },
   });
 
-  const logout = () => {
-    localStorage.removeItem("te_token");
-    localStorage.removeItem("te_teacher");
-    queryClient.clear();
-    router.push("/auth/login");
-  };
+  const logoutMutation = useMutation({
+    mutationFn: api.auth.logout,
+    onSettled: () => {
+      localStorage.removeItem("te_token");
+      localStorage.removeItem("te_teacher");
+      queryClient.clear();
+      router.push("/auth/login");
+    },
+  });
 
   return {
     teacher,
@@ -74,7 +77,8 @@ export function useAuth(requireAuth = true) {
     isLoggingIn: loginMutation.isPending,
     signup: signupMutation.mutateAsync,
     isSigningUp: signupMutation.isPending,
-    logout,
+    logout: () => logoutMutation.mutate(),
+    isLoggingOut: logoutMutation.isPending,
     refetchProfile: refetch,
   };
 }

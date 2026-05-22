@@ -39,13 +39,18 @@ export const requestSignupOtp = async (req: Request, res: Response) => {
     });
 
     const mailResult = await sendOtpEmail(email, otp);
+    if (!mailResult.delivered) {
+      await deleteOtp({ email, purpose: 'teacher-signup' });
+      return res.status(503).json({
+        message: 'Unable to send verification code right now. Please try again later.',
+      });
+    }
 
     return res.status(200).json({
       message: 'OTP sent successfully.',
       email,
       expiresAt,
       storage: storeResult.backend,
-      ...(mailResult.delivered ? {} : { otpPreview: otp }),
     });
   } catch (error) {
     return res.status(500).json({

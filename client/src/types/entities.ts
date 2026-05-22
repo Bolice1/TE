@@ -105,6 +105,8 @@ export interface Course {
   outcome?: string;
   className: string;
   year: string;
+  description?: string;
+  numberOfPeriodsInAWeek?: number;
   term?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -199,11 +201,13 @@ export interface ReportSendRequest {
  */
 
 export interface Teacher {
+  id?: string;
   _id?: string;
   email: string;
   name?: string;
-  schoolCode?: string;
-  schoolName?: string;
+  coachingName?: string;
+  address?: string;
+  phoneNumber?: string;
   department?: string;
   employeeId?: string;
   qualifications?: string[];
@@ -221,7 +225,6 @@ export interface AuthResponse {
 
 export interface OtpRequestResponse {
   message: string;
-  otpPreview?: string;
 }
 
 export interface OtpVerifyResponse {
@@ -232,11 +235,11 @@ export interface OtpVerifyResponse {
 export interface SignupRequest {
   email: string;
   name: string;
-  password?: string;
-  schoolCode?: string;
-  schoolName?: string;
-  department?: string;
-  employeeId?: string;
+  coachingName: string;
+  address: string;
+  phoneNumber?: string;
+  password: string;
+  otp: string;
 }
 
 export interface LoginRequest {

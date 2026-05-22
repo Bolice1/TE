@@ -15,12 +15,10 @@ export const sendOtpEmail = async (email: string, otp: string) => {
   });
 
   if (!mailResult.delivered) {
-    console.warn(
-      `OTP email delivery unavailable for ${email}. ${mailResult.error ?? 'Falling back to preview code.'} OTP: ${otp}`,
-    );
+    console.warn(`OTP email delivery failed for ${email}. ${mailResult.error ?? 'Unknown delivery error.'}`);
     return {
       delivered: false,
-      preview: otp,
+      error: mailResult.error,
     };
   }
 

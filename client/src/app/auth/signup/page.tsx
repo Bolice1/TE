@@ -4,14 +4,13 @@ import React, { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import { api } from "@/services/api";
-import { Loader2, Mail, Lock, User, School, MapPin, Phone, CheckCircle, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, Mail, Lock, User, School, MapPin, Phone, CheckCircle, ArrowRight } from "lucide-react";
 
 export default function SignupPage() {
   const { signup, isSigningUp } = useAuth(false);
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [otpPreview, setOtpPreview] = useState<string | null>(null);
 
   // Profile data
   const [name, setName] = useState("");
@@ -29,12 +28,8 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await api.auth.requestOtp(email);
+      await api.auth.requestOtp(email);
       setSuccess("Verification OTP code sent to your email.");
-      if (res.otpPreview) {
-        setOtpPreview(res.otpPreview);
-        setOtp(res.otpPreview); // Auto-fill for convenience
-      }
       setStep(2);
     } catch (err: any) {
       setError(err.message || "Failed to request OTP.");
@@ -92,15 +87,11 @@ export default function SignupPage() {
 
       <div className="w-full max-w-md z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-3">
-            <Sparkles className="w-4 h-4 animate-pulse" />
-            <span>Academic Intelligence Platform</span>
-          </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground font-display">
             TE<span className="text-primary font-normal"> (Teacher Emmy)</span>
           </h1>
           <p className="text-muted-text mt-2 text-sm">
-            Empowering educators with Rwanda CBC-aligned data insights.
+            Create your teacher workspace.
           </p>
         </div>
 
@@ -139,6 +130,8 @@ export default function SignupPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="teacher@school.rw"
+                    autoComplete="email"
+                    autoFocus
                     disabled={loading}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all"
                     required
@@ -172,15 +165,6 @@ export default function SignupPage() {
           {/* STEP 2: VERIFY OTP */}
           {step === 2 && (
             <form onSubmit={handleVerifyOtp} className="space-y-5">
-              {otpPreview && (
-                <div className="p-3 bg-primary/10 border border-primary/20 rounded-xl text-primary text-xs font-medium">
-                  🤖 <strong>Dev Bypass:</strong> The OTP code is{" "}
-                  <code className="bg-primary/20 px-1.5 py-0.5 rounded font-mono font-bold text-sm">
-                    {otpPreview}
-                  </code>
-                </div>
-              )}
-
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-1.5">
                   Enter 6-Digit OTP Code
@@ -191,6 +175,8 @@ export default function SignupPage() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   placeholder="000000"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                   disabled={loading}
                   className="w-full tracking-[0.5em] text-center font-mono py-2.5 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-lg transition-all"
                   required
@@ -236,6 +222,7 @@ export default function SignupPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Mutesi Emmy"
+                    autoComplete="name"
                     className="w-full pl-10 pr-4 py-2 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all"
                     required
                   />
@@ -253,6 +240,7 @@ export default function SignupPage() {
                     value={coachingName}
                     onChange={(e) => setCoachingName(e.target.value)}
                     placeholder="Kigali Academic Academy"
+                    autoComplete="organization"
                     className="w-full pl-10 pr-4 py-2 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all"
                     required
                   />
@@ -270,6 +258,7 @@ export default function SignupPage() {
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Gasabo, Kigali, Rwanda"
+                    autoComplete="street-address"
                     className="w-full pl-10 pr-4 py-2 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all"
                     required
                   />
@@ -287,6 +276,7 @@ export default function SignupPage() {
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     placeholder="+250788000000"
+                    autoComplete="tel"
                     className="w-full pl-10 pr-4 py-2 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all"
                   />
                 </div>
@@ -303,6 +293,7 @@ export default function SignupPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
+                    autoComplete="new-password"
                     className="w-full pl-10 pr-4 py-2 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all"
                     required
                   />

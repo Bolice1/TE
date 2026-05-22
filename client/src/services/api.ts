@@ -135,6 +135,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify(credentials),
       }),
+    logout: () =>
+      request<{ message: string }>("/auth/logout", {
+        method: "POST",
+      }),
     getProfile: () => request<{ teacher: Teacher }>("/auth/me"),
     updateProfile: (data: any) =>
       request<{ teacher: Teacher }>("/auth/me", {

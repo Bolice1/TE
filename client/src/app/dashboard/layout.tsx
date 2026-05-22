@@ -133,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </p>
               <p className="text-[10px] text-muted-text truncate flex items-center gap-1">
                 <School className="w-3 h-3 shrink-0" />
-                {teacher?.schoolName || "School Workspace"}
+                {teacher?.coachingName || "School Workspace"}
               </p>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {teacher?.name}
                   </p>
                   <p className="text-[10px] text-muted-text truncate">
-                    {teacher?.schoolName}
+                    {teacher?.coachingName || "School Workspace"}
                   </p>
                 </div>
               </div>
