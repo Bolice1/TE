@@ -15,7 +15,9 @@ export const sendOtpEmail = async (email: string, otp: string) => {
   });
 
   if (!mailResult.delivered) {
-    console.warn(`Email transporter not configured. OTP for ${email}: ${otp}`);
+    console.warn(
+      `OTP email delivery unavailable for ${email}. ${mailResult.error ?? 'Falling back to preview code.'} OTP: ${otp}`,
+    );
     return {
       delivered: false,
       preview: otp,

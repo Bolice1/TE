@@ -26,13 +26,22 @@ export const deliverEmail = async (options: {
   if (!transporter) {
     return {
       delivered: false,
+      error: 'Email transporter is not configured.',
     };
   }
 
-  await transporter.sendMail({
-    from: envConfiguration.emailUser,
-    ...options,
-  });
+  try {
+    await transporter.sendMail({
+      from: envConfiguration.emailUser,
+      ...options,
+    });
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    return {
+      delivered: false,
+      error: error instanceof Error ? error.message : 'Unknown email delivery error.',
+    };
+  }
 
   return {
     delivered: true,
