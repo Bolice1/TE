@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { getCurrentAcademicYear } from "@/utils/academic-year";
 
 export interface FilterContextType {
   academicYear: string;
@@ -18,7 +19,8 @@ export interface FilterContextType {
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
 
 export function FilterProvider({ children }: { children: React.ReactNode }) {
-  const [academicYear, setAcademicYear] = useState<string>("2026");
+  const currentAcademicYear = getCurrentAcademicYear();
+  const [academicYear, setAcademicYear] = useState<string>(currentAcademicYear);
   const [term, setTerm] = useState<string>("TERM 1");
   const [className, setClassName] = useState<string>("");
   const [courseId, setCourseId] = useState<string>("");
@@ -32,12 +34,16 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
       const storedClass = localStorage.getItem("te_filter_class");
       const storedCourse = localStorage.getItem("te_filter_course");
 
-      if (storedYear) setAcademicYear(storedYear);
+      if (storedYear && storedYear >= currentAcademicYear) {
+        setAcademicYear(storedYear);
+      } else {
+        localStorage.setItem("te_filter_year", currentAcademicYear);
+      }
       if (storedTerm) setTerm(storedTerm);
       if (storedClass) setClassName(storedClass);
       if (storedCourse) setCourseId(storedCourse);
     }
-  }, []);
+  }, [currentAcademicYear]);
 
   const handleSetAcademicYear = (val: string) => {
     setAcademicYear(val);

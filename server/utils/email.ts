@@ -1,15 +1,40 @@
 import nodemailer from 'nodemailer';
 import envConfiguration from '../config/env.js';
 
+const normalizeService = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return '';
+  }
+
+  if (normalized === 'gmail' || normalized === 'googlemail') {
+    return 'gmail';
+  }
+
+  return normalized.includes('.') ? '' : normalized;
+};
+
 const transporter =
   envConfiguration.emailUser && envConfiguration.emailPass
-    ? nodemailer.createTransport({
-        service: envConfiguration.emailService || 'gmail',
-        auth: {
-          user: envConfiguration.emailUser,
-          pass: envConfiguration.emailPass,
-        },
-      })
+    ? nodemailer.createTransport(
+        envConfiguration.emailHost
+          ? {
+              host: envConfiguration.emailHost,
+              port: envConfiguration.emailPort,
+              secure: envConfiguration.emailSecure,
+              auth: {
+                user: envConfiguration.emailUser,
+                pass: envConfiguration.emailPass,
+              },
+            }
+          : {
+              service: normalizeService(envConfiguration.emailService) || 'gmail',
+              auth: {
+                user: envConfiguration.emailUser,
+                pass: envConfiguration.emailPass,
+              },
+            },
+      )
     : null;
 
 export const isEmailTransportConfigured = () => Boolean(transporter);

@@ -154,7 +154,7 @@ export default function SignupPage() {
                   </>
                 ) : (
                   <>
-                    <span>Generate OTP</span>
+                    <span>Continue</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

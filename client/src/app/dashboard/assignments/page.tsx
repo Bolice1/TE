@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { useFilters } from "@/features/courses/filter-context";
+import { getCurrentAcademicYear } from "@/utils/academic-year";
 import {
   Calendar,
   BookOpen,
@@ -21,6 +22,8 @@ import {
 export default function AssignmentsPage() {
   const queryClient = useQueryClient();
   const { academicYear, className, availableClasses } = useFilters();
+  const currentAcademicYear = getCurrentAcademicYear();
+  const isHistoricalView = academicYear < currentAcademicYear;
   const [activeTab, setActiveTab] = useState<"schedule" | "create-assignment" | "courses">("schedule");
 
   // State for Course Form
@@ -68,6 +71,7 @@ export default function AssignmentsPage() {
       setCourseOutcome("");
       setCourseDesc("");
       setPeriods("3");
+      setCourseClassName(className || "S1");
       setFormSuccess("Course created successfully!");
     },
     onError: (err: any) => {
@@ -121,7 +125,7 @@ export default function AssignmentsPage() {
       name: courseName,
       code: courseCode || undefined,
       className: courseClassName,
-      year: academicYear,
+      year: currentAcademicYear,
       outcome: courseOutcome,
       description: courseDesc || undefined,
       numberOfPeriodsInAWeek: Number(periods),
@@ -218,6 +222,15 @@ export default function AssignmentsPage() {
         <div className="p-4 bg-success/5 border border-success/25 text-success rounded-xl text-sm max-w-2xl flex items-center gap-2">
           <CheckCircle className="w-4 h-4 text-success" />
           <span>{formSuccess}</span>
+        </div>
+      )}
+
+      {isHistoricalView && (
+        <div className="max-w-3xl rounded-2xl border border-warning/25 bg-warning/5 p-4 text-sm text-foreground">
+          <p className="font-semibold">You are viewing historical data for {academicYear}.</p>
+          <p className="mt-1 text-xs text-muted-text">
+            Past academic years are available for review only. New courses and assessments are created in {currentAcademicYear}.
+          </p>
         </div>
       )}
 
@@ -356,6 +369,7 @@ export default function AssignmentsPage() {
                   onChange={(e) => setSelectedCourseId(e.target.value)}
                   className="w-full py-2.5 px-3 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
                   required
+                  disabled={courses.length === 0 || isHistoricalView}
                 >
                   <option value="">Choose Course...</option>
                   {courses.map((course: any) => (
@@ -543,7 +557,7 @@ export default function AssignmentsPage() {
 
             <button
               type="submit"
-              disabled={createAssignmentMutation.isPending}
+              disabled={createAssignmentMutation.isPending || isHistoricalView}
               className="py-3 px-6 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl flex items-center gap-2 cursor-pointer shadow-lg shadow-primary/10 disabled:opacity-75"
             >
               {createAssignmentMutation.isPending ? (
@@ -653,7 +667,7 @@ export default function AssignmentsPage() {
 
               <button
                 type="submit"
-                disabled={createCourseMutation.isPending}
+                disabled={createCourseMutation.isPending || isHistoricalView}
                 className="w-full py-3 px-4 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow shadow-primary/15"
               >
                 {createCourseMutation.isPending ? (

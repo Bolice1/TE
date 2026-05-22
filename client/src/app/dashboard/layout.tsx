@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFilters } from "@/features/courses/filter-context";
 import { api } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
+import { getAcademicYearOptions } from "@/utils/academic-year";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -29,6 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { teacher, isLoading: isAuthLoading, logout } = useAuth(true);
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const yearOptions = getAcademicYearOptions();
 
   const {
     academicYear,
@@ -61,12 +63,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [courses, courseId, setCourseId]);
 
-  if (isAuthLoading) {
+  if (isAuthLoading || !teacher) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Sparkles className="w-10 h-10 text-primary animate-pulse mb-3" />
         <p className="text-sm text-muted-text font-medium animate-pulse">
-          Retrieving academic session...
+          Opening your workspace...
         </p>
       </div>
     );
@@ -245,9 +247,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 onChange={(e) => setAcademicYear(e.target.value)}
                 className="bg-transparent border-none text-foreground font-semibold focus:outline-none pr-2 cursor-pointer"
               >
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
               </select>
             </div>
 

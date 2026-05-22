@@ -25,6 +25,8 @@ export function useAuth(requireAuth = true) {
   });
 
   const teacher = profileData?.teacher;
+  const hasToken = Boolean(token);
+  const isAuthenticated = Boolean(token && teacher);
 
   // Handle route protection
   useEffect(() => {
@@ -32,12 +34,23 @@ export function useAuth(requireAuth = true) {
 
     const isAuthPage = pathname.startsWith("/auth");
 
-    if (requireAuth && !token && !isAuthPage) {
-      router.push("/auth/login");
-    } else if (token && isAuthPage) {
-      router.push("/dashboard");
+    if (requireAuth && !hasToken && !isAuthPage) {
+      router.replace("/auth/login");
+      return;
     }
-  }, [token, pathname, isLoading, requireAuth, router]);
+
+    if (requireAuth && hasToken && isError) {
+      localStorage.removeItem("te_token");
+      localStorage.removeItem("te_teacher");
+      queryClient.clear();
+      router.replace("/auth/login");
+      return;
+    }
+
+    if (isAuthenticated && isAuthPage) {
+      router.replace("/dashboard");
+    }
+  }, [hasToken, isAuthenticated, isError, isLoading, pathname, queryClient, requireAuth, router]);
 
   const loginMutation = useMutation({
     mutationFn: api.auth.login,
@@ -45,7 +58,7 @@ export function useAuth(requireAuth = true) {
       localStorage.setItem("te_token", data.token);
       localStorage.setItem("te_teacher", JSON.stringify(data.teacher));
       queryClient.setQueryData(["auth-profile"], { teacher: data.teacher });
-      router.push("/dashboard");
+      router.replace("/dashboard");
     },
   });
 
@@ -55,7 +68,7 @@ export function useAuth(requireAuth = true) {
       localStorage.setItem("te_token", data.token);
       localStorage.setItem("te_teacher", JSON.stringify(data.teacher));
       queryClient.setQueryData(["auth-profile"], { teacher: data.teacher });
-      router.push("/dashboard");
+      router.replace("/dashboard");
     },
   });
 
@@ -65,13 +78,15 @@ export function useAuth(requireAuth = true) {
       localStorage.removeItem("te_token");
       localStorage.removeItem("te_teacher");
       queryClient.clear();
-      router.push("/auth/login");
+      router.replace("/auth/login");
     },
   });
 
   return {
     teacher,
-    isLoading: !!token && isLoading,
+    hasToken,
+    isAuthenticated,
+    isLoading: (hasToken && isLoading) || (requireAuth && !isAuthenticated),
     isError,
     login: loginMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,

@@ -10,6 +10,7 @@ import {
   toTrimmedString,
 } from '../middleware/validation.middleware.js';
 import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
+import { getCurrentAcademicYear, isHistoricalAcademicYear } from '../utils/academic-year.js';
 
 export const createAssignment = async (req: Request, res: Response) => {
   try {
@@ -74,6 +75,12 @@ export const createAssignment = async (req: Request, res: Response) => {
 
     if (!course) {
       return res.status(404).json({ message: 'Course not found for this teacher.' });
+    }
+
+    if (isHistoricalAcademicYear(course.year) || isHistoricalAcademicYear(year)) {
+      return res.status(400).json({
+        message: 'Historical academic years are read-only. Create assessments in the current academic year.',
+      });
     }
 
     if (course.className !== className || course.year !== year) {
@@ -160,6 +167,12 @@ export const createCourse = async (req: Request, res: Response) => {
 
     if (numberOfPeriodsInAWeek <= 0) {
       return res.status(400).json({ message: 'Periods per week must be greater than zero.' });
+    }
+
+    if (isHistoricalAcademicYear(year)) {
+      return res.status(400).json({
+        message: `Courses cannot be created for past academic years. Create the course in ${getCurrentAcademicYear()} or later.`,
+      });
     }
 
     const course = await Course.create({
