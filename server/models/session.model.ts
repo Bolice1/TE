@@ -34,7 +34,6 @@ const teacherSessionSchema = new mongoose.Schema<ITeacherSession>(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
     },
     revokedAt: {
       type: Date,

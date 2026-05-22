@@ -3,11 +3,25 @@
  * All environment variables are defined here and validated at runtime.
  */
 
+const normalizeApiBaseUrl = (value?: string): string => {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return "/api";
+  }
+
+  if (trimmed.startsWith("/")) {
+    return trimmed.replace(/\/+$/, "") || "/api";
+  }
+
+  return "/api";
+};
+
 export const env = {
   /**
-   * API Base URL - must be a public URL (NEXT_PUBLIC_ prefix)
+   * API Base URL - frontend uses the same-origin proxy path by default.
    */
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api",
+  apiBaseUrl: normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL),
 
   /**
    * Application metadata
@@ -35,11 +49,10 @@ export const env = {
  * Validate that required environment variables are set
  */
 export function validateEnv(): void {
-  const required = ["NEXT_PUBLIC_API_BASE_URL"];
-  const missing = required.filter((key) => !process.env[key]);
-
-  if (missing.length > 0 && typeof window === "undefined") {
-    console.warn(`Missing environment variables: ${missing.join(", ")}`);
+  if (typeof window === "undefined" && !process.env.BACKEND_API_URL && !process.env.NEXT_PUBLIC_API_BASE_URL) {
+    console.warn(
+      "Missing backend API configuration. Set BACKEND_API_URL or NEXT_PUBLIC_API_BASE_URL for non-local environments."
+    );
   }
 }
 
