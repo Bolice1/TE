@@ -24,6 +24,12 @@ import type {
 } from "@/types/analytics";
 
 const API_URL = env.apiBaseUrl;
+type ApiSuccessEnvelope<T> = {
+  success: true;
+  message?: string;
+  data: T;
+  meta?: Record<string, unknown>;
+};
 
 class ApiError extends Error {
   status: number;
@@ -84,7 +90,19 @@ async function request<T>(
     return (await response.blob()) as unknown as T;
   }
 
-  return response.json() as Promise<T>;
+  const json = await response.json();
+
+  if (
+    json &&
+    typeof json === "object" &&
+    "success" in json &&
+    (json as { success?: unknown }).success === true &&
+    "data" in json
+  ) {
+    return (json as ApiSuccessEnvelope<T>).data;
+  }
+
+  return json as T;
 }
 
 // Global Filter Interface
