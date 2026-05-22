@@ -1,43 +1,61 @@
-import mongoose from 'mongoose'
+import mongoose from 'mongoose';
 
-export const coachModel = new mongoose.Schema({
+export interface ICoach {
+  name: string;
+  email: string;
+  address: string;
+  coachingName: string;
+  password: string;
+  isEmailVerified: boolean;
+  isDeleted: boolean;
+  deletedAt: Date | null;
+}
+
+const coachSchema = new mongoose.Schema<ICoach>(
+  {
     name: {
-        type: String,
-        required: true,
-        unique: false
+      type: String,
+      required: true,
+      trim: true,
     },
     email: {
-        required: true,
-        unique: true,
-        type: String
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
     },
     address: {
-        required: true,
-        unique: false,
-        type: String
+      type: String,
+      required: true,
+      trim: true,
     },
     coachingName: {
-        required: true,
-        unique: true,
-        type: String
+      type: String,
+      required: true,
+      trim: true,
     },
     password: {
-        required: true,
-        unique: true,
-        type: String
+      type: String,
+      required: true,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: true,
     },
     isDeleted: {
-        type: Boolean,
-        required: true,
-        default: false
+      type: Boolean,
+      default: false,
     },
-
     deletedAt: {
-        type: Date,
-        required: false,
-        default: null
-    }
-})
+      type: Date,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
-const Coach = mongoose.model('Coach', coachModel)
+const Coach = mongoose.model<ICoach>('Coach', coachSchema);
 export default Coach;

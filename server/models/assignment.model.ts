@@ -1,55 +1,75 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-export const assignmentSchema = new mongoose.Schema({
+export interface IAssignment {
+  course: mongoose.Types.ObjectId;
+  teacher: mongoose.Types.ObjectId;
+  title: string;
+  description?: string;
+  assignmentDate: Date;
+  dueDate?: Date;
+  className: string;
+  year: string;
+  maxScore: number;
+  isDeleted: boolean;
+  deletedAt: Date | null;
+}
+
+const assignmentSchema = new mongoose.Schema<IAssignment>(
+  {
     course: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Course'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      required: true,
+    },
+    teacher: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coach',
+      required: true,
     },
     title: {
-        type: String,
-        required: true,
-        unique: false
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
     },
     assignmentDate: {
-        type: Date,
-        required: true,
-        unique: false
+      type: Date,
+      required: true,
     },
-    participantsNumber: {
-        type: Number,
-        required: true,
-        unique: false
+    dueDate: {
+      type: Date,
     },
-    participants: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Student'
+    className: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    coach: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Teacher'
+    year: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    max: {
-        type: String,
-        required: true,
-        unique: false
-    },
-    min: {
-        type: String,
-        required: true,
-        unique: false
+    maxScore: {
+      type: Number,
+      required: true,
+      min: 1,
     },
     isDeleted: {
-        type: Boolean,
-        required: true,
-        default: false
+      type: Boolean,
+      default: false,
     },
-
     deletedAt: {
-        type: Date,
-        required: false,
-        default: null
-    }
-})
+      type: Date,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
-const Assignment = mongoose.model('Assignment', assignmentSchema)
+const Assignment = mongoose.model<IAssignment>('Assignment', assignmentSchema);
 export default Assignment;

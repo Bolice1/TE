@@ -1,21 +1,40 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const otpSchema = new mongoose.Schema({
+export interface IOtp {
+  email: string;
+  otp: string;
+  purpose: 'teacher-signup';
+  expiresAt: Date;
+}
+
+const otpSchema = new mongoose.Schema<IOtp>(
+  {
     email: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
     },
-
     otp: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
-
+    purpose: {
+      type: String,
+      enum: ['teacher-signup'],
+      required: true,
+    },
     expiresAt: {
-        type: Date,
-        required: true
-    }
-});
+      type: Date,
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
-const OTP = mongoose.model('OTP', otpSchema)
-export default OTP
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+const OTP = mongoose.model<IOtp>('OTP', otpSchema);
+export default OTP;

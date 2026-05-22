@@ -1,44 +1,74 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
+export interface IMark {
+  student: mongoose.Types.ObjectId;
+  course: mongoose.Types.ObjectId;
+  teacher: mongoose.Types.ObjectId;
+  assignment: mongoose.Types.ObjectId;
+  score: number;
+  term: string;
+  year: string;
+  comment?: string;
+  isDeleted: boolean;
+  deletedAt: Date | null;
+}
 
-export const markSchema = new mongoose.Schema({
-
+const markSchema = new mongoose.Schema<IMark>(
+  {
     student: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Student'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Student',
+      required: true,
     },
     course: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Course'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Course',
+      required: true,
     },
-    choach: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Choach"
-    },
-    marks: {
-        type: String,
-        required: true,
-        unique: false
+    teacher: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coach',
+      required: true,
     },
     assignment: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Assignment'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Assignment',
+      required: true,
+    },
+    score: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    term: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    year: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    comment: {
+      type: String,
+      trim: true,
     },
     isDeleted: {
-        type: Boolean,
-        required: true,
-        default: false
+      type: Boolean,
+      default: false,
     },
-
     deletedAt: {
-        type: Date,
-        required: false,
-        default: null
-    }
+      type: Date,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
+markSchema.index({ assignment: 1, student: 1 }, { unique: true });
 
-
-})
-
-const Marks = mongoose.model('Marks', markSchema)
+const Marks = mongoose.model<IMark>('Marks', markSchema);
 export default Marks;

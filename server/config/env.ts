@@ -1,22 +1,43 @@
-import dotenv from 'dotenv'
-import type { Date } from 'mongoose'
+import dotenv from 'dotenv';
 
-dotenv.config()
+dotenv.config();
+
+const readEnv = (...keys: string[]): string => {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return '';
+};
+
+const readNumber = (fallback: number, ...keys: string[]): number => {
+  const rawValue = readEnv(...keys);
+  if (!rawValue) {
+    return fallback;
+  }
+
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 export const envConfiguration = {
+  port: readNumber(4000, 'PORT', 'port'),
+  emailUser: readEnv('EMAIL_USER', 'email_user'),
+  emailPass: readEnv('EMAIL_PASS', 'email_pass'),
+  emailService: readEnv('EMAIL_SERVICE', 'email_service'),
+  jwtToken: readEnv('JWT_TOKEN', 'jwt_token', 'jtw_token'),
+  refreshToken: readEnv('REFRESH_TOKEN', 'refresh_token'),
+  db: readEnv('DB', 'db'),
+  tokenExpiresIn: readEnv('TOKEN_EXPIRES_IN', 'tokenExpiresIn', 'token-expires_in') || '1d',
+  otpExpiresAtMs: readNumber(300000, 'OTP_EXPIRES_AT', 'expires_at'),
+};
 
-    email_user: process.env.email_user as string,
-    email_pass: process.env.email_pass as string,
-    jwt_token: process.env.jwt_token as string,
-    refresh_token: process.env.refresh_token as string,
-    db: process.env.db as string,
-    tokenExpiresIn: process.env.tokenExpiresIn as string,
-    expires_at: process.env.expires_at as string
+if (!envConfiguration.jwtToken || !envConfiguration.db) {
+  console.error('Missing required environment configuration for database or JWT.');
+  process.exit(1);
 }
 
-// let us validate and check 
-if (!envConfiguration.email_pass || !envConfiguration.email_user || !envConfiguration.jwt_token || !envConfiguration.refresh_token || !envConfiguration.db || !envConfiguration.tokenExpiresIn || !envConfiguration.expires_at) {
-    console.log("some env values are missing pleaze")
-    process.abort()
-}
 export default envConfiguration;
-

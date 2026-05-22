@@ -1,97 +1,179 @@
-import Marks from "../models/marks.model.js";
-import type { Request, Response } from "express";
+import type { Request, Response } from 'express';
+import Assignment from '../models/assignment.model.js';
+import Course from '../models/course.model.js';
+import Marks from '../models/marks.model.js';
+import Student from '../models/student.model.js';
+import { ensureNumber, ensureObjectId, toTrimmedString } from '../middleware/validation.middleware.js';
 
 export const register = async (req: Request, res: Response) => {
-    try {
-        const { student, course, marks, assignment } = req.body;
-
-        const choach = req.user.id;
-
-        if (!student)
-            return res.status(400).json({ msg: "Select student" });
-
-        if (!course)
-            return res.status(400).json({ msg: "Select course" });
-
-        if (marks === undefined)
-            return res.status(400).json({ msg: "No marks entered" });
-
-        if (!assignment)
-            return res.status(400).json({ msg: "Select assignment" });
-
-        const registered = await Marks.create({
-            student,
-            course,
-            choach,
-            marks,
-            assignment
-        });
-
-        return res.status(201).json(registered);
-
-    } catch (error) {
-        console.log(error);
-
-        return res.status(500).json({
-            msg: "Something went wrong"
-        });
+  try {
+    const teacherId = req.user?.id;
+    if (!teacherId) {
+      return res.status(401).json({ message: 'Authentication is required.' });
     }
+
+    const studentId = ensureObjectId(req.body.studentId);
+    const courseId = ensureObjectId(req.body.courseId);
+    const assignmentId = ensureObjectId(req.body.assignmentId);
+    const score = ensureNumber(req.body.score);
+    const term = toTrimmedString(req.body.term);
+    const year = toTrimmedString(req.body.year);
+    const comment = toTrimmedString(req.body.comment);
+
+    if (!studentId || !courseId || !assignmentId || score === null || !term || !year) {
+      return res.status(400).json({
+        message: 'Student, course, assignment, score, term, and year are required.',
+      });
+    }
+
+    const [student, course, assignment] = await Promise.all([
+      Student.findOne({ _id: studentId, isDeleted: false }),
+      Course.findOne({ _id: courseId, teacher: teacherId, isDeleted: false }),
+      Assignment.findOne({ _id: assignmentId, teacher: teacherId, isDeleted: false }),
+    ]);
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found.' });
+    }
+
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found.' });
+    }
+
+    if (!assignment) {
+      return res.status(404).json({ message: 'Assignment not found.' });
+    }
+
+    if (score > assignment.maxScore) {
+      return res.status(400).json({
+        message: `Score cannot exceed the assignment max score of ${assignment.maxScore}.`,
+      });
+    }
+
+    const markPayload: Record<string, unknown> = {
+      student: studentId,
+      course: courseId,
+      teacher: teacherId,
+      assignment: assignmentId,
+      score,
+      term,
+      year,
+    };
+
+    if (comment) markPayload.comment = comment;
+
+    const registered = await Marks.create(markPayload);
+
+    return res.status(201).json({
+      message: 'Student mark saved successfully.',
+      mark: registered,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Failed to save student mark.',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 };
 
 export const update = async (req: Request, res: Response) => {
-    try {
-        const { marksId, marks } = req.body;
-
-        const choachId = req.user.id;
-
-        if (!marksId) {
-            return res.status(400).json({
-                msg: "No marks selected for update"
-            });
-        }
-
-        if (marks === undefined) {
-            return res.status(400).json({
-                msg: "No marks entered"
-            });
-        }
-
-        const marksExists = await Marks.findById(marksId);
-
-        if (!marksExists) {
-            return res.status(404).json({
-                msg: "Marks do not exist"
-            });
-        }
-
-        if (marksExists.choach.toString() !== choachId) {
-            return res.status(403).json({
-                msg: "Unauthorized to update these marks"
-            });
-        }
-
-        const updatedMarks = await Marks.findByIdAndUpdate(
-            marksId,
-            {
-                $set: {
-                    marks
-                }
-            },
-            {
-                new: true
-            }
-        );
-
-        return res.status(200).json({
-            msg: "Marks updated successfully",
-            updatedMarks
-        });
-
-    } catch (error) {
-        console.log(error);
-
-        return res.status(500).json({
-            msg: "Something went wrong"
-        });
+  try {
+    const teacherId = req.user?.id;
+    if (!teacherId) {
+      return res.status(401).json({ message: 'Authentication is required.' });
     }
+
+    const marksId = ensureObjectId(req.params.id);
+    const score = ensureNumber(req.body.score);
+    const comment = toTrimmedString(req.body.comment);
+
+    if (!marksId) {
+      return res.status(400).json({ message: 'Valid mark id is required.' });
+    }
+
+    if (score === null && comment === null) {
+      return res.status(400).json({ message: 'Provide a score or comment to update.' });
+    }
+
+    const mark = await Marks.findOne({
+      _id: marksId,
+      teacher: teacherId,
+      isDeleted: false,
+    }).populate('assignment', 'maxScore');
+
+    if (!mark) {
+      return res.status(404).json({ message: 'Mark not found.' });
+    }
+
+    const assignment = mark.assignment as unknown as { maxScore: number };
+
+    if (score !== null && score > assignment.maxScore) {
+      return res.status(400).json({
+        message: `Score cannot exceed the assignment max score of ${assignment.maxScore}.`,
+      });
+    }
+
+    if (score !== null) {
+      mark.score = score;
+    }
+
+    if (comment !== null) {
+      mark.comment = comment;
+    }
+
+    await mark.save();
+
+    return res.status(200).json({
+      message: 'Marks updated successfully.',
+      mark,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Failed to update mark.',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+export const listMarks = async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.user?.id;
+    if (!teacherId) {
+      return res.status(401).json({ message: 'Authentication is required.' });
+    }
+
+    const term = toTrimmedString(req.query.term);
+    const year = toTrimmedString(req.query.year);
+    const className = toTrimmedString(req.query.className);
+
+    const query: Record<string, unknown> = {
+      teacher: teacherId,
+      isDeleted: false,
+    };
+
+    if (term) query.term = term;
+    if (year) query.year = year;
+
+    const marks = await Marks.find(query)
+      .populate('student', 'name studentCode className year')
+      .populate('course', 'name className year')
+      .populate('assignment', 'title maxScore')
+      .sort({ createdAt: -1 });
+
+    const filteredMarks = className
+      ? marks.filter((mark) => {
+          const student = mark.student as { className?: string };
+          return student.className === className;
+        })
+      : marks;
+
+    return res.status(200).json({
+      marks: filteredMarks,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Failed to fetch marks.',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 };

@@ -1,49 +1,63 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-export const courseSchema = new mongoose.Schema({
+export interface ICourse {
+  name: string;
+  teacher: mongoose.Types.ObjectId;
+  className: string;
+  year: string;
+  numberOfPeriodsInAWeek: number;
+  outcome: string;
+  isDeleted: boolean;
+  deletedAt: Date | null;
+}
+
+const courseSchema = new mongoose.Schema<ICourse>(
+  {
     name: {
-        type: String,
-        required: true,
-        unique: false
+      type: String,
+      required: true,
+      trim: true,
     },
     teacher: {
-        type: String,
-        required: true,
-        unique: false
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coach',
+      required: true,
     },
-    class: {
-        type: String,
-        required: true,
-        unique: false
+    className: {
+      type: String,
+      required: true,
+      trim: true,
     },
     year: {
-        type: String,
-        required: true,
-        unique: false
+      type: String,
+      required: true,
+      trim: true,
     },
-    numberOfPeriodsInaweek: {
-        type: Number,
-        required: true,
-        unique: false
+    numberOfPeriodsInAWeek: {
+      type: Number,
+      required: true,
+      min: 1,
     },
-    OutCome: {
-        type: String,
-        required: true,
-        unique: false
+    outcome: {
+      type: String,
+      required: true,
+      trim: true,
     },
     isDeleted: {
-        type: Boolean,
-        required: true,
-        default: false
+      type: Boolean,
+      default: false,
     },
-
     deletedAt: {
-        type: Date,
-        required: false,
-        default: null
-    }
+      type: Date,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
-})
+courseSchema.index({ teacher: 1, name: 1, className: 1, year: 1 }, { unique: true });
 
-const Course = mongoose.model('Course', courseSchema);
+const Course = mongoose.model<ICourse>('Course', courseSchema);
 export default Course;

@@ -1,14 +1,14 @@
 {
   "name": "te",
   "version": "1.0.0",
-  "description": "This is a secure platform for Teacher Emmy's company ",
+  "description": "School backend for teacher authentication, students, assignments, marks, and report cards.",
   "keywords": [
-    "Just",
-    "teaching",
-    "Marks",
-    "Students",
-    "Report",
-    "cards"
+    "school",
+    "teacher",
+    "marks",
+    "students",
+    "reports",
+    "otp"
   ],
   "homepage": "https://github.com/Bolice1/TE#readme",
   "bugs": {
@@ -21,9 +21,12 @@
   "license": "UNLICENSED",
   "author": "KOMEZUSENGE Bolice",
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --watch --experimental-strip-types index.ts",
+    "start": "node dist/index.js",
+    "test": "npm run build"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
