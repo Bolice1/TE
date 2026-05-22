@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { useFilters } from "@/features/courses/filter-context";
+import { queryKeys } from "@/lib/query-keys";
 import {
   AreaChart,
   Area,
@@ -38,23 +39,27 @@ export default function AnalyticsPage() {
 
   // Fetch detailed analytics sub-endpoints
   const { data: gradesData, isLoading: loadingGrades } = useQuery({
-    queryKey: ["analytics-grades", academicYear, term, className, courseId],
+    queryKey: queryKeys.analytics.grades({ academicYear, term, className, courseId }),
     queryFn: () => api.analytics.getGrades({ academicYear, term, className, courseId }),
+    staleTime: 60_000,
   });
 
   const { data: coursesData, isLoading: loadingCourses } = useQuery({
-    queryKey: ["analytics-courses", academicYear, term, className, courseId],
+    queryKey: queryKeys.analytics.courses({ academicYear, term, className, courseId }),
     queryFn: () => api.analytics.getCourses({ academicYear, term, className, courseId }),
+    staleTime: 60_000,
   });
 
   const { data: classesData, isLoading: loadingClasses } = useQuery({
-    queryKey: ["analytics-classes", academicYear, term, className, courseId],
+    queryKey: queryKeys.analytics.classes({ academicYear, term, className, courseId }),
     queryFn: () => api.analytics.getClasses({ academicYear, term, className, courseId }),
+    staleTime: 60_000,
   });
 
   const { data: trendsData, isLoading: loadingTrends } = useQuery({
-    queryKey: ["analytics-trends", academicYear, term, className, courseId],
+    queryKey: queryKeys.analytics.trends({ academicYear, term, className, courseId }),
     queryFn: () => api.analytics.getTrends({ academicYear, term, className, courseId }),
+    staleTime: 60_000,
   });
 
   const isLoading = loadingGrades || loadingCourses || loadingClasses || loadingTrends;

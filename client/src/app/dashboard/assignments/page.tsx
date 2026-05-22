@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { useFilters } from "@/features/courses/filter-context";
 import { getCurrentAcademicYear } from "@/utils/academic-year";
+import { queryKeys } from "@/lib/query-keys";
+import { invalidateAnalyticsQueries, invalidateAssignmentsQueries } from "@/lib/query-invalidation";
 import {
   Calendar,
   BookOpen,
@@ -53,8 +55,9 @@ export default function AssignmentsPage() {
 
   // Queries
   const { data: assignmentsData, isLoading } = useQuery({
-    queryKey: ["assignments-list", className, academicYear],
+    queryKey: queryKeys.assignments.list({ className: className || undefined, year: academicYear }),
     queryFn: () => api.assignments.list({ className: className || undefined, year: academicYear }),
+    staleTime: 60_000,
   });
 
   const assignments = assignmentsData?.assignments || [];
@@ -63,9 +66,37 @@ export default function AssignmentsPage() {
   // Mutations
   const createCourseMutation = useMutation({
     mutationFn: api.courses.create,
+    onMutate: async (newCourse) => {
+      const coursesKey = queryKeys.courses.list({ className: className || undefined, year: academicYear });
+      const assignmentsKey = queryKeys.assignments.list({ className: className || undefined, year: academicYear });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: coursesKey }),
+        queryClient.cancelQueries({ queryKey: assignmentsKey }),
+      ]);
+
+      const previousAssignmentsData = queryClient.getQueryData<{ assignments: typeof assignments; courses: typeof courses }>(
+        assignmentsKey,
+      );
+      const previousCoursesData = queryClient.getQueryData<{ courses: typeof courses }>(coursesKey);
+      const optimisticCourse = {
+        _id: `optimistic-course-${Date.now()}`,
+        ...newCourse,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      queryClient.setQueryData(coursesKey, (old?: { courses: typeof courses }) => ({
+        courses: [optimisticCourse, ...(old?.courses ?? [])],
+      }));
+      queryClient.setQueryData(assignmentsKey, (old?: { assignments: typeof assignments; courses: typeof courses }) => ({
+        assignments: old?.assignments ?? [],
+        courses: [optimisticCourse, ...(old?.courses ?? [])],
+      }));
+
+      return { previousAssignmentsData, previousCoursesData, assignmentsKey, coursesKey };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["assignments-list"] });
-      queryClient.invalidateQueries({ queryKey: ["courses-list"] });
+      void invalidateAssignmentsQueries(queryClient);
       setCourseName("");
       setCourseCode("");
       setCourseOutcome("");
@@ -74,16 +105,54 @@ export default function AssignmentsPage() {
       setCourseClassName(className || "S1");
       setFormSuccess("Course created successfully!");
     },
-    onError: (err: any) => {
+    onError: (err: any, _newCourse, context) => {
+      if (context?.previousAssignmentsData) {
+        queryClient.setQueryData(context.assignmentsKey, context.previousAssignmentsData);
+      }
+      if (context?.previousCoursesData) {
+        queryClient.setQueryData(context.coursesKey, context.previousCoursesData);
+      }
       setFormError(err.message || "Failed to create course.");
+    },
+    onSettled: () => {
+      void invalidateAssignmentsQueries(queryClient);
     },
   });
 
   const createAssignmentMutation = useMutation({
     mutationFn: api.assignments.create,
+    onMutate: async (newAssignment) => {
+      const assignmentsKey = queryKeys.assignments.list({ className: className || undefined, year: academicYear });
+      await queryClient.cancelQueries({ queryKey: assignmentsKey });
+      const previousAssignmentsData = queryClient.getQueryData<{ assignments: typeof assignments; courses: typeof courses }>(
+        assignmentsKey,
+      );
+      const selectedCourse = courses.find((course: any) => course._id === newAssignment.courseId);
+      const optimisticAssignment = {
+        _id: `optimistic-assignment-${Date.now()}`,
+        ...newAssignment,
+        course: selectedCourse,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      queryClient.setQueryData(assignmentsKey, (old?: { assignments: typeof assignments; courses: typeof courses }) => ({
+        assignments: [optimisticAssignment, ...(old?.assignments ?? [])],
+        courses: old?.courses ?? courses,
+      }));
+
+      return { previousAssignmentsData, assignmentsKey };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["assignments-list"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-analytics"] });
+      void Promise.all([
+        invalidateAssignmentsQueries(queryClient),
+        invalidateAnalyticsQueries(queryClient, {
+          academicYear,
+          term: undefined,
+          className,
+          courseId: selectedCourseId,
+        }),
+      ]);
       setAssignTitle("");
       setAssignDesc("");
       setAssignDate("");
@@ -92,8 +161,14 @@ export default function AssignmentsPage() {
       setEndTime("");
       setFormSuccess("Assessment scheduled successfully!");
     },
-    onError: (err: any) => {
+    onError: (err: any, _newAssignment, context) => {
+      if (context?.previousAssignmentsData) {
+        queryClient.setQueryData(context.assignmentsKey, context.previousAssignmentsData);
+      }
       setFormError(err.message || "Failed to schedule assessment.");
+    },
+    onSettled: () => {
+      void invalidateAssignmentsQueries(queryClient);
     },
   });
 

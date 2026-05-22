@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { queryKeys } from "@/lib/query-keys";
 
 export function useAuth(requireAuth = true) {
   const router = useRouter();
@@ -18,7 +19,7 @@ export function useAuth(requireAuth = true) {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["auth-profile"],
+    queryKey: queryKeys.auth.profile(),
     queryFn: () => api.auth.getProfile(),
     enabled: !!token,
     retry: false,
@@ -57,7 +58,7 @@ export function useAuth(requireAuth = true) {
     onSuccess: (data) => {
       localStorage.setItem("te_token", data.token);
       localStorage.setItem("te_teacher", JSON.stringify(data.teacher));
-      queryClient.setQueryData(["auth-profile"], { teacher: data.teacher });
+      queryClient.setQueryData(queryKeys.auth.profile(), { teacher: data.teacher });
       router.replace("/dashboard");
     },
   });
@@ -67,7 +68,7 @@ export function useAuth(requireAuth = true) {
     onSuccess: (data) => {
       localStorage.setItem("te_token", data.token);
       localStorage.setItem("te_teacher", JSON.stringify(data.teacher));
-      queryClient.setQueryData(["auth-profile"], { teacher: data.teacher });
+      queryClient.setQueryData(queryKeys.auth.profile(), { teacher: data.teacher });
       router.replace("/dashboard");
     },
   });

@@ -6,7 +6,7 @@ import {
   toTrimmedString,
 } from '../middleware/validation.middleware.js';
 import envConfiguration from '../config/env.js';
-import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
+import { appCache, buildTeacherCachePrefix, invalidateTeacherDomains } from '../utils/cache.js';
 
 export const registerStudent = async (req: Request, res: Response) => {
   try {
@@ -58,9 +58,7 @@ export const registerStudent = async (req: Request, res: Response) => {
 
     const student = await Student.create(payload);
 
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'students'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'marks'));
+    await invalidateTeacherDomains(teacherId, ['students', 'reports', 'marks', 'analytics-dashboard', 'analytics-dataset']);
 
     return res.status(201).json({
       message: 'Student registered successfully.',

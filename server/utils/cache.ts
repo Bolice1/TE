@@ -1,3 +1,5 @@
+import { getRedisClient, isRedisReady } from '../config/redis.js';
+
 type CacheEntry<T> = {
   expiresAt: number;
   value: T;
@@ -44,3 +46,92 @@ export const appCache = new MemoryCache();
 
 export const buildTeacherCachePrefix = (teacherId: string, domain: string) =>
   `teacher:${teacherId}:${domain}`;
+
+export const getCachedJson = async <T>(key: string): Promise<T | null> => {
+  const memoryValue = appCache.get<T>(key);
+  if (memoryValue !== null) {
+    return memoryValue;
+  }
+
+  if (!isRedisReady()) {
+    return null;
+  }
+
+  const client = getRedisClient();
+  if (!client) {
+    return null;
+  }
+
+  const rawValue = await client.get(key);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as T;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+export const setCachedJson = async <T>(key: string, value: T, ttlMs: number) => {
+  appCache.set(key, value, ttlMs);
+
+  if (!isRedisReady()) {
+    return;
+  }
+
+  const client = getRedisClient();
+  if (!client) {
+    return;
+  }
+
+  await client.set(key, JSON.stringify(value), {
+    PX: ttlMs,
+  });
+};
+
+export const deleteCachedByPrefix = async (prefix: string) => {
+  appCache.deleteByPrefix(prefix);
+
+  if (!isRedisReady()) {
+    return;
+  }
+
+  const client = getRedisClient();
+  if (!client) {
+    return;
+  }
+
+  const keysToDelete: string[] = [];
+  for await (const key of client.scanIterator({
+    MATCH: `${prefix}*`,
+    COUNT: 100,
+  })) {
+    keysToDelete.push(String(key));
+  }
+
+  if (keysToDelete.length > 0) {
+    await client.del(keysToDelete);
+  }
+};
+
+export const invalidateTeacherDomains = async (teacherId: string, domains: string[]) => {
+  await Promise.all(domains.map((domain) => deleteCachedByPrefix(buildTeacherCachePrefix(teacherId, domain))));
+};
+
+export const getOrSetCachedValue = async <T>(
+  key: string,
+  ttlMs: number,
+  loader: () => Promise<T>,
+) => {
+  const cachedValue = await getCachedJson<T>(key);
+  if (cachedValue !== null) {
+    return cachedValue;
+  }
+
+  const loadedValue = await loader();
+  await setCachedJson(key, loadedValue, ttlMs);
+  return loadedValue;
+};

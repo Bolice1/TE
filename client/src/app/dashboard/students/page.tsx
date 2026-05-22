@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { useFilters } from "@/features/courses/filter-context";
+import { queryKeys } from "@/lib/query-keys";
+import { invalidateAnalyticsQueries, invalidateStudentQueries } from "@/lib/query-invalidation";
 import {
   LineChart,
   Line,
@@ -58,8 +60,9 @@ export default function StudentsPage() {
 
   // Queries
   const { data: studentsData, isLoading } = useQuery({
-    queryKey: ["students-list", className, academicYear],
+    queryKey: queryKeys.students.list({ className: className || undefined, year: academicYear }),
     queryFn: () => api.students.list({ className: className || undefined, year: academicYear }),
+    staleTime: 60_000,
   });
   const students = studentsData?.students || [];
 
@@ -74,7 +77,7 @@ export default function StudentsPage() {
   const selectedStudent = students.find((s) => s._id === selectedStudentId);
 
   const { data: studentMarksData } = useQuery({
-    queryKey: ["student-marks", selectedStudentId],
+    queryKey: queryKeys.marks.list({ studentId: selectedStudentId || undefined }),
     queryFn: () => api.marks.list({ studentId: selectedStudentId || undefined }),
     enabled: !!selectedStudentId,
   });
@@ -82,7 +85,7 @@ export default function StudentsPage() {
 
   // Single Student Report Cards
   const { data: studentReportsData } = useQuery({
-    queryKey: ["student-reports", selectedStudentId],
+    queryKey: queryKeys.reports.list({ studentId: selectedStudentId || undefined }),
     queryFn: () => api.reports.list({ studentId: selectedStudentId || undefined }),
     enabled: !!selectedStudentId,
   });
@@ -122,8 +125,10 @@ export default function StudentsPage() {
   const registerStudentMutation = useMutation({
     mutationFn: api.students.register,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students-list"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-analytics"] });
+      void Promise.all([
+        invalidateStudentQueries(queryClient),
+        invalidateAnalyticsQueries(queryClient, { academicYear, className }),
+      ]);
       setStudentName("");
       setStudentCode("");
       setParentName("");

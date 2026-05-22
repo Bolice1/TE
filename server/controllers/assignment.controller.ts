@@ -9,7 +9,7 @@ import {
   ensureStringArray,
   toTrimmedString,
 } from '../middleware/validation.middleware.js';
-import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
+import { appCache, buildTeacherCachePrefix, invalidateTeacherDomains } from '../utils/cache.js';
 import { getCurrentAcademicYear, isHistoricalAcademicYear } from '../utils/academic-year.js';
 
 export const createAssignment = async (req: Request, res: Response) => {
@@ -121,10 +121,14 @@ export const createAssignment = async (req: Request, res: Response) => {
 
     const assignment = await Assignment.create(assignmentPayload);
 
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'assignments'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'courses'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'marks'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
+    await invalidateTeacherDomains(teacherId, [
+      'assignments',
+      'courses',
+      'marks',
+      'reports',
+      'analytics-dashboard',
+      'analytics-dataset',
+    ]);
 
     return res.status(201).json({
       message: 'Assignment created successfully.',
@@ -186,10 +190,14 @@ export const createCourse = async (req: Request, res: Response) => {
       numberOfPeriodsInAWeek,
     });
 
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'courses'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'assignments'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'marks'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
+    await invalidateTeacherDomains(teacherId, [
+      'courses',
+      'assignments',
+      'marks',
+      'reports',
+      'analytics-dashboard',
+      'analytics-dataset',
+    ]);
 
     return res.status(201).json({
       message: 'Course created successfully.',

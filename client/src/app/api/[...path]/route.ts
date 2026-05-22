@@ -1,12 +1,10 @@
 import { NextRequest } from "next/server";
 
-const DEFAULT_BACKEND_API_URL = "http://localhost:4000/api";
-
-const normalizeBackendApiUrl = (value?: string): string => {
+const normalizeBackendApiUrl = (value?: string): string | null => {
   const trimmed = value?.trim();
 
   if (!trimmed) {
-    return DEFAULT_BACKEND_API_URL;
+    return null;
   }
 
   const withoutTrailingSlash = trimmed.replace(/\/+$/, "");
@@ -15,7 +13,7 @@ const normalizeBackendApiUrl = (value?: string): string => {
     : `${withoutTrailingSlash}/api`;
 };
 
-const getBackendApiUrl = (): string =>
+const getBackendApiUrl = (): string | null =>
   normalizeBackendApiUrl(
     process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL
   );
@@ -26,6 +24,14 @@ const proxyRequest = async (
 ) => {
   const { path } = await context.params;
   const backendApiUrl = getBackendApiUrl();
+  if (!backendApiUrl) {
+    return Response.json(
+      {
+        message: "Backend API URL is not configured.",
+      },
+      { status: 500 }
+    );
+  }
   const targetUrl = new URL(`${backendApiUrl}/${path.join("/")}`);
 
   request.nextUrl.searchParams.forEach((value, key) => {

@@ -5,7 +5,7 @@ import Marks from '../models/marks.model.js';
 import Student from '../models/student.model.js';
 import envConfiguration from '../config/env.js';
 import { ensureNumber, ensureObjectId, toTrimmedString } from '../middleware/validation.middleware.js';
-import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
+import { appCache, buildTeacherCachePrefix, invalidateTeacherDomains } from '../utils/cache.js';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -86,8 +86,7 @@ export const register = async (req: Request, res: Response) => {
 
     const registered = await Marks.create(markPayload);
 
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'marks'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
+    await invalidateTeacherDomains(teacherId, ['marks', 'reports', 'analytics-dashboard', 'analytics-dataset']);
 
     return res.status(201).json({
       message: 'Student mark saved successfully.',
@@ -158,8 +157,7 @@ export const update = async (req: Request, res: Response) => {
 
     await mark.save();
 
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'marks'));
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
+    await invalidateTeacherDomains(teacherId, ['marks', 'reports', 'analytics-dashboard', 'analytics-dataset']);
 
     return res.status(200).json({
       message: 'Marks updated successfully.',

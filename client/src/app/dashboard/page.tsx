@@ -4,6 +4,7 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { useFilters } from "@/features/courses/filter-context";
+import { queryKeys } from "@/lib/query-keys";
 import {
   LineChart,
   Line,
@@ -38,8 +39,9 @@ export default function DashboardPage() {
   const { academicYear, term, className, courseId } = useFilters();
 
   const { data: dashboardData, isLoading, isError } = useQuery({
-    queryKey: ["dashboard-analytics", academicYear, term, className, courseId],
+    queryKey: queryKeys.analytics.dashboard({ academicYear, term, className, courseId }),
     queryFn: () => api.analytics.getDashboard({ academicYear, term, className, courseId }),
+    staleTime: 60_000,
   });
 
   if (isLoading) {

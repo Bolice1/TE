@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { useFilters } from "@/features/courses/filter-context";
+import { queryKeys } from "@/lib/query-keys";
+import { invalidateReportsQueries } from "@/lib/query-invalidation";
 import {
   FileText,
   User,
@@ -42,8 +44,9 @@ export default function ReportsPage() {
 
   // 1. Fetch Students
   const { data: studentsData, isLoading: loadingStudents } = useQuery({
-    queryKey: ["reports-students", className, academicYear],
+    queryKey: queryKeys.students.list({ className: className || undefined, year: academicYear }),
     queryFn: () => api.students.list({ className: className || undefined, year: academicYear }),
+    staleTime: 60_000,
   });
   const students = studentsData?.students || [];
 
@@ -51,7 +54,11 @@ export default function ReportsPage() {
 
   // Load existing report comments if available
   const { data: reportsData } = useQuery({
-    queryKey: ["student-report-card", selectedStudentId, academicYear, term, reportType],
+    queryKey: queryKeys.reports.studentCard(selectedStudentId, {
+      year: academicYear,
+      term: reportType === "term" ? term : undefined,
+      reportType,
+    }),
     queryFn: () =>
       api.reports.list({
         studentId: selectedStudentId || undefined,
@@ -93,10 +100,38 @@ export default function ReportsPage() {
         { year: academicYear, term: reportType === "term" ? term : undefined, reportType },
         body
       ),
+    onMutate: async (body: any) => {
+      const reportKey = queryKeys.reports.studentCard(selectedStudentId, {
+        year: academicYear,
+        term: reportType === "term" ? term : undefined,
+        reportType,
+      });
+      await queryClient.cancelQueries({ queryKey: reportKey });
+      const previousReport = queryClient.getQueryData<typeof reportsData>(reportKey);
+      if (selectedStudentId) {
+        queryClient.setQueryData(reportKey, {
+          reports: [
+            {
+              _id: "optimistic-report",
+              student: selectedStudentId,
+              year: academicYear,
+              term: reportType === "term" ? term : undefined,
+              reportType,
+              teacherComment: body.teacherComment,
+              headTeacherComment: body.headTeacherComment,
+              strengths: body.strengths,
+              weaknesses: body.weaknesses,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
+        });
+      }
+      return { previousReport, reportKey };
+    },
     onSuccess: (data) => {
       setActionSuccess("Report card compiled and cached successfully!");
-      queryClient.invalidateQueries({ queryKey: ["student-report-card"] });
-      queryClient.invalidateQueries({ queryKey: ["student-reports"] });
+      void invalidateReportsQueries(queryClient);
       // Update iframe source
       const url = api.reports.printUrl(selectedStudentId!, {
         year: academicYear,
@@ -106,8 +141,14 @@ export default function ReportsPage() {
       // Force reload by appending timestamp
       setPreviewUrl(`${url}&t=${Date.now()}`);
     },
-    onError: (err: any) => {
+    onError: (err: any, _body, context) => {
+      if (context?.previousReport) {
+        queryClient.setQueryData(context.reportKey, context.previousReport);
+      }
       setActionError(err.message || "Failed to generate report.");
+    },
+    onSettled: () => {
+      void invalidateReportsQueries(queryClient);
     },
   });
 

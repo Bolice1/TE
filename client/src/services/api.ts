@@ -39,6 +39,21 @@ class ApiError extends Error {
   }
 }
 
+const buildQueryString = (
+  params: Record<string, string | number | undefined | null>
+) => {
+  const query = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      query.append(key, String(value));
+    }
+  }
+
+  const queryString = query.toString();
+  return queryString ? `?${queryString}` : "";
+};
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -151,13 +166,8 @@ export const api = {
       }),
   },
   students: {
-    list: (filters: { className?: string; year?: string; studentCode?: string }) => {
-      const query = new URLSearchParams();
-      if (filters.className) query.append("className", filters.className);
-      if (filters.year) query.append("year", filters.year);
-      if (filters.studentCode) query.append("studentCode", filters.studentCode);
-      return request<StudentListResponse>(`/students?${query.toString()}`);
-    },
+    list: (filters: { className?: string; year?: string; studentCode?: string }) =>
+      request<StudentListResponse>(`/students${buildQueryString(filters)}`),
     register: (data: any) =>
       request<Student>("/students", {
         method: "POST",
@@ -165,12 +175,8 @@ export const api = {
       }),
   },
   courses: {
-    list: (filters: { className?: string; year?: string }) => {
-      const query = new URLSearchParams();
-      if (filters.className) query.append("className", filters.className);
-      if (filters.year) query.append("year", filters.year);
-      return request<{ courses: Course[] }>(`/assignments/courses?${query.toString()}`);
-    },
+    list: (filters: { className?: string; year?: string }) =>
+      request<{ courses: Course[] }>(`/assignments/courses${buildQueryString(filters)}`),
     create: (data: any) =>
       request<Course>("/assignments/courses", {
         method: "POST",
@@ -178,14 +184,8 @@ export const api = {
       }),
   },
   assignments: {
-    list: (filters: { className?: string; year?: string; courseId?: string; type?: string }) => {
-      const query = new URLSearchParams();
-      if (filters.className) query.append("className", filters.className);
-      if (filters.year) query.append("year", filters.year);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      if (filters.type) query.append("type", filters.type);
-      return request<AssignmentsListResponse>(`/assignments?${query.toString()}`);
-    },
+    list: (filters: { className?: string; year?: string; courseId?: string; type?: string }) =>
+      request<AssignmentsListResponse>(`/assignments${buildQueryString(filters)}`),
     create: (data: any) =>
       request<Assignment>("/assignments", {
         method: "POST",
@@ -193,15 +193,8 @@ export const api = {
       }),
   },
   marks: {
-    list: (filters: { term?: string; year?: string; className?: string; studentId?: string; courseId?: string }) => {
-      const query = new URLSearchParams();
-      if (filters.term) query.append("term", filters.term);
-      if (filters.year) query.append("year", filters.year);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.studentId) query.append("studentId", filters.studentId);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      return request<MarksListResponse>(`/marks?${query.toString()}`);
-    },
+    list: (filters: { term?: string; year?: string; className?: string; studentId?: string; courseId?: string }) =>
+      request<MarksListResponse>(`/marks${buildQueryString(filters)}`),
     save: (data: any) =>
       request<Mark>("/marks", {
         method: "POST",
@@ -214,117 +207,105 @@ export const api = {
       }),
   },
   reports: {
-    list: (filters: { year?: string; term?: string; studentId?: string; reportType?: string }) => {
-      const query = new URLSearchParams();
-      if (filters.year) query.append("year", filters.year);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.studentId) query.append("studentId", filters.studentId);
-      if (filters.reportType) query.append("reportType", filters.reportType);
-      return request<ReportListResponse>(`/reports?${query.toString()}`);
-    },
+    list: (filters: { year?: string; term?: string; studentId?: string; reportType?: string }) =>
+      request<ReportListResponse>(`/reports${buildQueryString(filters)}`),
     generate: (studentId: string, queryParams: { year: string; term?: string; reportType: string }, body: any) => {
-      const query = new URLSearchParams();
-      query.append("year", queryParams.year);
-      if (queryParams.term) query.append("term", queryParams.term);
-      query.append("reportType", queryParams.reportType);
-      return request<Report>(`/reports/${studentId}/generate?${query.toString()}`, {
+      return request<Report>(`/reports/${studentId}/generate${buildQueryString(queryParams)}`, {
         method: "POST",
         body: JSON.stringify(body),
       });
     },
     printUrl: (studentId: string, queryParams: { year: string; term?: string; reportType: string }) => {
-      const query = new URLSearchParams();
-      query.append("year", queryParams.year);
-      if (queryParams.term) query.append("term", queryParams.term);
-      query.append("reportType", queryParams.reportType);
-      return `${API_URL}/reports/${studentId}/print?${query.toString()}`;
+      return `${API_URL}/reports/${studentId}/print${buildQueryString(queryParams)}`;
     },
     downloadBlob: (studentId: string, queryParams: { year: string; term?: string; reportType: string }) => {
-      const query = new URLSearchParams();
-      query.append("year", queryParams.year);
-      if (queryParams.term) query.append("term", queryParams.term);
-      query.append("reportType", queryParams.reportType);
-      return request<Blob>(`/reports/${studentId}/download?${query.toString()}`);
+      return request<Blob>(`/reports/${studentId}/download${buildQueryString(queryParams)}`);
     },
     sendEmail: (studentId: string, queryParams: { year: string; term?: string; reportType: string }, body: any) => {
-      const query = new URLSearchParams();
-      query.append("year", queryParams.year);
-      if (queryParams.term) query.append("term", queryParams.term);
-      query.append("reportType", queryParams.reportType);
-      return request<{ message: string }>(`/reports/${studentId}/send?${query.toString()}`, {
+      return request<{ message: string }>(`/reports/${studentId}/send${buildQueryString(queryParams)}`, {
         method: "POST",
         body: JSON.stringify(body),
       });
     },
   },
   analytics: {
-    getDashboard: (filters: Partial<GlobalFilters>) => {
-      const query = new URLSearchParams();
-      if (filters.academicYear) query.append("year", filters.academicYear);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      return request<DashboardAnalytics>(`/analytics/dashboard?${query.toString()}`);
-    },
+    getDashboard: (filters: Partial<GlobalFilters>) =>
+      request<DashboardAnalytics>(
+        `/analytics/dashboard${buildQueryString({
+          year: filters.academicYear,
+          term: filters.term,
+          className: filters.className,
+          courseId: filters.courseId,
+        })}`
+      ),
     getTopStudents: (filters: Partial<GlobalFilters>, page = 1, limit = 10) => {
-      const query = new URLSearchParams();
-      if (filters.academicYear) query.append("year", filters.academicYear);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      query.append("page", page.toString());
-      query.append("limit", limit.toString());
-      return request<TopStudentsResponse>(`/analytics/students/top?${query.toString()}`);
+      return request<TopStudentsResponse>(
+        `/analytics/students/top${buildQueryString({
+          year: filters.academicYear,
+          term: filters.term,
+          className: filters.className,
+          courseId: filters.courseId,
+          page,
+          limit,
+        })}`
+      );
     },
     getWeakStudents: (filters: Partial<GlobalFilters>, page = 1, limit = 10) => {
-      const query = new URLSearchParams();
-      if (filters.academicYear) query.append("year", filters.academicYear);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      query.append("page", page.toString());
-      query.append("limit", limit.toString());
-      return request<TopStudentsResponse>(`/analytics/students/weak?${query.toString()}`);
+      return request<TopStudentsResponse>(
+        `/analytics/students/weak${buildQueryString({
+          year: filters.academicYear,
+          term: filters.term,
+          className: filters.className,
+          courseId: filters.courseId,
+          page,
+          limit,
+        })}`
+      );
     },
-    getClasses: (filters: Partial<GlobalFilters>) => {
-      const query = new URLSearchParams();
-      if (filters.academicYear) query.append("year", filters.academicYear);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      return request<Class[]>(`/analytics/classes?${query.toString()}`);
-    },
-    getCourses: (filters: Partial<GlobalFilters>) => {
-      const query = new URLSearchParams();
-      if (filters.academicYear) query.append("year", filters.academicYear);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      return request<any[]>(`/analytics/courses?${query.toString()}`);
-    },
-    getTrends: (filters: Partial<GlobalFilters>) => {
-      const query = new URLSearchParams();
-      if (filters.academicYear) query.append("year", filters.academicYear);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      return request<Trend>(`/analytics/trends?${query.toString()}`);
-    },
-    getGrades: (filters: Partial<GlobalFilters>) => {
-      const query = new URLSearchParams();
-      if (filters.academicYear) query.append("year", filters.academicYear);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      return request<GradesAnalytics>(`/analytics/grades?${query.toString()}`);
-    },
-    getReportsSummary: (filters: Partial<GlobalFilters>) => {
-      const query = new URLSearchParams();
-      if (filters.academicYear) query.append("year", filters.academicYear);
-      if (filters.term) query.append("term", filters.term);
-      if (filters.className) query.append("className", filters.className);
-      if (filters.courseId) query.append("courseId", filters.courseId);
-      return request<ReportsSummary>(`/analytics/reports/summary?${query.toString()}`);
-    },
+    getClasses: (filters: Partial<GlobalFilters>) =>
+      request<Class[]>(
+        `/analytics/classes${buildQueryString({
+          year: filters.academicYear,
+          term: filters.term,
+          className: filters.className,
+          courseId: filters.courseId,
+        })}`
+      ),
+    getCourses: (filters: Partial<GlobalFilters>) =>
+      request<any[]>(
+        `/analytics/courses${buildQueryString({
+          year: filters.academicYear,
+          term: filters.term,
+          className: filters.className,
+          courseId: filters.courseId,
+        })}`
+      ),
+    getTrends: (filters: Partial<GlobalFilters>) =>
+      request<Trend>(
+        `/analytics/trends${buildQueryString({
+          year: filters.academicYear,
+          term: filters.term,
+          className: filters.className,
+          courseId: filters.courseId,
+        })}`
+      ),
+    getGrades: (filters: Partial<GlobalFilters>) =>
+      request<GradesAnalytics>(
+        `/analytics/grades${buildQueryString({
+          year: filters.academicYear,
+          term: filters.term,
+          className: filters.className,
+          courseId: filters.courseId,
+        })}`
+      ),
+    getReportsSummary: (filters: Partial<GlobalFilters>) =>
+      request<ReportsSummary>(
+        `/analytics/reports/summary${buildQueryString({
+          year: filters.academicYear,
+          term: filters.term,
+          className: filters.className,
+          courseId: filters.courseId,
+        })}`
+      ),
   },
 };

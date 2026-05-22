@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import { fetchAnalyticsRows, type AnalyticsFilter } from '../repositories/analytics.repository.js';
+import envConfiguration from '../config/env.js';
+import { buildTeacherCachePrefix, getOrSetCachedValue } from '../utils/cache.js';
 import {
   buildGradeDistribution,
   computeGpaLikeScore,
@@ -8,6 +10,7 @@ import {
   performanceBandFromPercentage,
   rankDeterministically,
 } from '../utils/analytics.js';
+const inFlightAnalyticsRequests = new Map<string, Promise<Awaited<ReturnType<typeof computeAnalyticsDataset>>>>();
 
 type AnalyticsRow = {
   studentId: mongoose.Types.ObjectId;
@@ -298,7 +301,10 @@ const aggregateTrends = (rows: AnalyticsRow[]) => {
     .sort((a, b) => a.label.localeCompare(b.label));
 };
 
-export const buildAnalyticsDataset = async (filters: AnalyticsFilter) => {
+const buildAnalyticsDatasetCacheKey = (filters: AnalyticsFilter) =>
+  `${buildTeacherCachePrefix(filters.teacherId, 'analytics-dataset')}:${JSON.stringify(filters)}`;
+
+const computeAnalyticsDataset = async (filters: AnalyticsFilter) => {
   const rows = (await fetchAnalyticsRows(filters)) as AnalyticsRow[];
   const students = rankDeterministically(aggregateStudents(rows));
   const courses = aggregateCourses(rows);
@@ -352,6 +358,23 @@ export const buildAnalyticsDataset = async (filters: AnalyticsFilter) => {
     upcomingAssignments,
     recommendations,
   };
+};
+
+export const buildAnalyticsDataset = async (filters: AnalyticsFilter) => {
+  const cacheKey = buildAnalyticsDatasetCacheKey(filters);
+  const cachedLoader = () =>
+    getOrSetCachedValue(cacheKey, envConfiguration.cacheTtlMs, () => computeAnalyticsDataset(filters));
+
+  const existingRequest = inFlightAnalyticsRequests.get(cacheKey);
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = cachedLoader().finally(() => {
+    inFlightAnalyticsRequests.delete(cacheKey);
+  });
+  inFlightAnalyticsRequests.set(cacheKey, request);
+  return request;
 };
 
 export const getDashboardAnalytics = async (

@@ -4,10 +4,12 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useFilters } from "@/features/courses/filter-context";
 import { api } from "@/services/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAcademicYearOptions } from "@/utils/academic-year";
+import { queryKeys } from "@/lib/query-keys";
+import { prefetchRouteData } from "@/lib/query-prefetch";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   BarChart3,
@@ -29,6 +31,8 @@ import {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { teacher, isLoading: isAuthLoading, logout } = useAuth(true);
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const yearOptions = getAcademicYearOptions();
 
@@ -46,9 +50,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // Load courses dynamically based on className and academicYear
   const { data: coursesData } = useQuery({
-    queryKey: ["courses-list", className, academicYear],
+    queryKey: queryKeys.courses.list({ className: className || undefined, year: academicYear }),
     queryFn: () => api.courses.list({ className: className || undefined, year: academicYear }),
     enabled: !!teacher,
+    staleTime: 5 * 60_000,
   });
 
   const courses = coursesData?.courses || [];
@@ -82,6 +87,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Marks Spreadsheet", href: "/dashboard/marks", icon: Edit3 },
     { name: "Report Cards", href: "/dashboard/reports", icon: FileText },
   ];
+  const activeFilters = { academicYear, term, className, courseId };
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -110,6 +116,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.name}
                 href={item.href}
+                onMouseEnter={() => {
+                  router.prefetch(item.href);
+                  void prefetchRouteData(queryClient, item.href, activeFilters);
+                }}
+                onFocus={() => {
+                  router.prefetch(item.href);
+                  void prefetchRouteData(queryClient, item.href, activeFilters);
+                }}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                   isActive
                     ? "bg-primary text-white shadow-md shadow-primary/10"
@@ -178,6 +192,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     key={item.name}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
+                    onMouseEnter={() => {
+                      router.prefetch(item.href);
+                      void prefetchRouteData(queryClient, item.href, activeFilters);
+                    }}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                       isActive
                         ? "bg-primary text-white shadow-md shadow-primary/10"

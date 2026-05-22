@@ -3,7 +3,7 @@ import Reports from '../models/reports.model.js';
 import envConfiguration from '../config/env.js';
 import { ensureObjectId, ensureStringArray, toTrimmedString } from '../middleware/validation.middleware.js';
 import { generateStudentReport } from '../services/report.service.js';
-import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
+import { appCache, buildTeacherCachePrefix, invalidateTeacherDomains } from '../utils/cache.js';
 import { sendParentReportEmail } from '../utils/report.email.js';
 import { writeAuditLog } from '../services/audit.service.js';
 
@@ -53,6 +53,7 @@ export const generateReport = async (req: Request, res: Response) => {
     });
 
     invalidateReportCache(teacherId);
+    await invalidateTeacherDomains(teacherId, ['analytics-dashboard', 'analytics-dataset']);
     await writeAuditLog({
       req,
       teacherId,

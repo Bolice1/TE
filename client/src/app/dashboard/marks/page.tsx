@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
 import { useFilters } from "@/features/courses/filter-context";
+import { queryKeys } from "@/lib/query-keys";
+import { invalidateAnalyticsQueries, invalidateMarksQueries } from "@/lib/query-invalidation";
 import {
   Loader2,
   AlertTriangle,
@@ -32,24 +34,31 @@ export default function MarksEntryPage() {
 
   // 1. Fetch Students
   const { data: studentsData, isLoading: loadingStudents } = useQuery({
-    queryKey: ["marks-students", className, academicYear],
+    queryKey: queryKeys.students.list({ className: className || undefined, year: academicYear }),
     queryFn: () => api.students.list({ className: className || undefined, year: academicYear }),
     enabled: !!className,
+    staleTime: 60_000,
   });
   const students = studentsData?.students || [];
 
   // 2. Fetch Assignments for Course
   const { data: assignmentsData, isLoading: loadingAssignments } = useQuery({
-    queryKey: ["marks-assignments", className, academicYear, courseId],
+    queryKey: queryKeys.assignments.list({ className: className || undefined, year: academicYear, courseId: courseId || undefined }),
     queryFn: () => api.assignments.list({ className: className || undefined, year: academicYear, courseId: courseId || undefined }),
     enabled: !!courseId,
+    staleTime: 60_000,
   });
   const assignments = assignmentsData?.assignments || [];
   const selectedAssignment = assignments.find((a: any) => a._id === selectedAssignmentId);
 
   // 3. Fetch Existing Marks
   const { data: marksData, isLoading: loadingMarks } = useQuery({
-    queryKey: ["marks-list", academicYear, term, className, courseId, selectedAssignmentId],
+    queryKey: queryKeys.marks.list({
+      year: academicYear,
+      term,
+      className: className || undefined,
+      courseId: courseId || undefined,
+    }),
     queryFn: () =>
       api.marks.list({
         year: academicYear,
@@ -117,17 +126,66 @@ export default function MarksEntryPage() {
         });
       }
     },
-    onMutate: () => {
+    onMutate: async (payload) => {
       setSaveStatus("saving");
+      const marksKey = queryKeys.marks.list({
+        year: academicYear,
+        term,
+        className: className || undefined,
+        courseId: courseId || undefined,
+      });
+      await queryClient.cancelQueries({ queryKey: marksKey });
+      const previousMarksData = queryClient.getQueryData<typeof marksData>(marksKey);
+      const student = students.find((item: any) => item._id === payload.studentId);
+      const assignment = assignments.find((item: any) => item._id === selectedAssignmentId);
+
+      queryClient.setQueryData(marksKey, (old?: { marks: any[] }) => {
+        const currentMarks = old?.marks ?? [];
+        const existingIndex = currentMarks.findIndex(
+          (mark: any) =>
+            mark.student?._id === payload.studentId &&
+            mark.assignment?._id === selectedAssignmentId,
+        );
+
+        const optimisticMark = {
+          _id: payload.markId || `optimistic-mark-${payload.studentId}`,
+          score: payload.score,
+          comment: payload.comment,
+          term,
+          year: academicYear,
+          student,
+          assignment,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        if (existingIndex >= 0) {
+          const nextMarks = [...currentMarks];
+          nextMarks[existingIndex] = { ...nextMarks[existingIndex], ...optimisticMark };
+          return { marks: nextMarks };
+        }
+
+        return { marks: [...currentMarks, optimisticMark] };
+      });
+
+      return { previousMarksData, marksKey };
     },
     onSuccess: () => {
       setSaveStatus("saved");
-      queryClient.invalidateQueries({ queryKey: ["marks-list"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-analytics"] });
+      void Promise.all([
+        invalidateMarksQueries(queryClient),
+        invalidateAnalyticsQueries(queryClient, { academicYear, term, className, courseId }),
+      ]);
     },
-    onError: (err: any) => {
+    onError: (err: any, _payload, context) => {
+      if (context?.previousMarksData) {
+        queryClient.setQueryData(context.marksKey, context.previousMarksData);
+      }
       setSaveStatus("error");
       setSaveErrorMessage(err.message || "Failed to autosave mark.");
+    },
+    onSettled: () => {
+      void invalidateMarksQueries(queryClient);
     },
   });
 
