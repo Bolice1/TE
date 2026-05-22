@@ -3,6 +3,7 @@ import envConfiguration from '../config/env.js';
 
 const normalizeService = (value: string) => {
   const normalized = value.trim().toLowerCase();
+
   if (!normalized) {
     return '';
   }
@@ -14,7 +15,8 @@ const normalizeService = (value: string) => {
   return normalized.includes('.') ? '' : normalized;
 };
 
-const looksLikeHostname = (value: string) => /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(value.trim());
+const looksLikeHostname = (value: string) =>
+  /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(value.trim());
 
 const buildTransportOptions = () => {
   if (!envConfiguration.emailUser || !envConfiguration.emailPass) {
@@ -26,6 +28,15 @@ const buildTransportOptions = () => {
       host: envConfiguration.emailHost,
       port: envConfiguration.emailPort,
       secure: envConfiguration.emailSecure,
+
+      // FIX: Force IPv4 to avoid ENETUNREACH on Render
+      family: 4,
+
+      // Optional safer SMTP timeouts
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
+
       auth: {
         user: envConfiguration.emailUser,
         pass: envConfiguration.emailPass,
@@ -33,10 +44,21 @@ const buildTransportOptions = () => {
     };
   }
 
-  const normalizedService = normalizeService(envConfiguration.emailService);
+  const normalizedService = normalizeService(
+    envConfiguration.emailService
+  );
+
   if (normalizedService) {
     return {
       service: normalizedService,
+
+      // FIX: Force IPv4
+      family: 4,
+
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
+
       auth: {
         user: envConfiguration.emailUser,
         pass: envConfiguration.emailPass,
@@ -49,6 +71,14 @@ const buildTransportOptions = () => {
       host: envConfiguration.emailService.trim(),
       port: envConfiguration.emailPort,
       secure: envConfiguration.emailSecure,
+
+      // FIX: Force IPv4
+      family: 4,
+
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
+
       auth: {
         user: envConfiguration.emailUser,
         pass: envConfiguration.emailPass,
@@ -60,9 +90,14 @@ const buildTransportOptions = () => {
 };
 
 const transportOptions = buildTransportOptions();
-const transporter = transportOptions ? nodemailer.createTransport(transportOptions) : null;
 
-export const isEmailTransportConfigured = () => Boolean(transporter);
+const transporter = transportOptions
+  ? nodemailer.createTransport(transportOptions)
+  : null;
+
+export const isEmailTransportConfigured = () =>
+  Boolean(transporter);
+
 export const getEmailTransportDebugInfo = () => ({
   configured: Boolean(transporter),
   hasUser: Boolean(envConfiguration.emailUser),
@@ -90,7 +125,8 @@ export const deliverEmail = async (options: {
   if (!transporter) {
     return {
       delivered: false,
-      error: 'Email transporter is not configured. Set EMAIL_USER and EMAIL_PASS, plus either EMAIL_SERVICE or EMAIL_HOST.',
+      error:
+        'Email transporter is not configured. Set EMAIL_USER and EMAIL_PASS, plus either EMAIL_SERVICE or EMAIL_HOST.',
     };
   }
 
@@ -99,15 +135,19 @@ export const deliverEmail = async (options: {
       from: envConfiguration.emailUser,
       ...options,
     });
+
+    return {
+      delivered: true,
+    };
   } catch (error) {
     console.error('Failed to send email:', error);
+
     return {
       delivered: false,
-      error: error instanceof Error ? error.message : 'Unknown email delivery error.',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Unknown email delivery error.',
     };
   }
-
-  return {
-    delivered: true,
-  };
 };
