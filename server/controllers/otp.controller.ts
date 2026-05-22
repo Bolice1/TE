@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import Coach from '../models/coach.model.js';
 import envConfiguration from '../config/env.js';
 import { sendOtpEmail } from '../utils/otp.email.js';
+import { getEmailTransportDebugInfo } from '../utils/email.js';
 import { isNonEmptyString, isValidEmail, toTrimmedString } from '../middleware/validation.middleware.js';
 import { deleteOtp, readOtp, storeOtp } from '../utils/otp.store.js';
 
@@ -41,6 +42,7 @@ export const requestSignupOtp = async (req: Request, res: Response) => {
     const mailResult = await sendOtpEmail(email, otp);
     if (!mailResult.delivered) {
       await deleteOtp({ email, purpose: 'teacher-signup' });
+      console.error('OTP email delivery unavailable.', getEmailTransportDebugInfo());
       return res.status(503).json({
         message: 'Unable to send verification code right now. Please try again later.',
       });

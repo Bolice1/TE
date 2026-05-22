@@ -14,30 +14,69 @@ const normalizeService = (value: string) => {
   return normalized.includes('.') ? '' : normalized;
 };
 
-const transporter =
-  envConfiguration.emailUser && envConfiguration.emailPass
-    ? nodemailer.createTransport(
-        envConfiguration.emailHost
-          ? {
-              host: envConfiguration.emailHost,
-              port: envConfiguration.emailPort,
-              secure: envConfiguration.emailSecure,
-              auth: {
-                user: envConfiguration.emailUser,
-                pass: envConfiguration.emailPass,
-              },
-            }
-          : {
-              service: normalizeService(envConfiguration.emailService) || 'gmail',
-              auth: {
-                user: envConfiguration.emailUser,
-                pass: envConfiguration.emailPass,
-              },
-            },
-      )
-    : null;
+const looksLikeHostname = (value: string) => /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(value.trim());
+
+const buildTransportOptions = () => {
+  if (!envConfiguration.emailUser || !envConfiguration.emailPass) {
+    return null;
+  }
+
+  if (envConfiguration.emailHost) {
+    return {
+      host: envConfiguration.emailHost,
+      port: envConfiguration.emailPort,
+      secure: envConfiguration.emailSecure,
+      auth: {
+        user: envConfiguration.emailUser,
+        pass: envConfiguration.emailPass,
+      },
+    };
+  }
+
+  const normalizedService = normalizeService(envConfiguration.emailService);
+  if (normalizedService) {
+    return {
+      service: normalizedService,
+      auth: {
+        user: envConfiguration.emailUser,
+        pass: envConfiguration.emailPass,
+      },
+    };
+  }
+
+  if (looksLikeHostname(envConfiguration.emailService)) {
+    return {
+      host: envConfiguration.emailService.trim(),
+      port: envConfiguration.emailPort,
+      secure: envConfiguration.emailSecure,
+      auth: {
+        user: envConfiguration.emailUser,
+        pass: envConfiguration.emailPass,
+      },
+    };
+  }
+
+  return null;
+};
+
+const transportOptions = buildTransportOptions();
+const transporter = transportOptions ? nodemailer.createTransport(transportOptions) : null;
 
 export const isEmailTransportConfigured = () => Boolean(transporter);
+export const getEmailTransportDebugInfo = () => ({
+  configured: Boolean(transporter),
+  hasUser: Boolean(envConfiguration.emailUser),
+  hasPass: Boolean(envConfiguration.emailPass),
+  emailService: envConfiguration.emailService || null,
+  emailHost: envConfiguration.emailHost || null,
+  emailPort: envConfiguration.emailPort,
+  emailSecure: envConfiguration.emailSecure,
+  mode: transportOptions
+    ? 'service' in transportOptions
+      ? 'service'
+      : 'host'
+    : 'disabled',
+});
 
 export const deliverEmail = async (options: {
   to: string;
@@ -51,7 +90,7 @@ export const deliverEmail = async (options: {
   if (!transporter) {
     return {
       delivered: false,
-      error: 'Email transporter is not configured.',
+      error: 'Email transporter is not configured. Set EMAIL_USER and EMAIL_PASS, plus either EMAIL_SERVICE or EMAIL_HOST.',
     };
   }
 
