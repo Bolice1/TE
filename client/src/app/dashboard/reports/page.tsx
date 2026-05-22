@@ -236,7 +236,7 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between border-b border-border pb-4">
                 <div>
                   <h3 className="font-bold text-foreground text-sm">Grading Report Comments</h3>
-                  <p className="text-xs text-muted-text">Student: {selectedStudent.studentName}</p>
+                  <p className="text-xs text-muted-text">Student: {selectedStudent.name}</p>
                 </div>
                 <select
                   value={reportType}

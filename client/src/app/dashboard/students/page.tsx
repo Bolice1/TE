@@ -109,7 +109,8 @@ export default function StudentsPage() {
   // Chart data for student marks trend
   const chartData = studentMarks
     .map((mark) => {
-      const percentage = mark.assignment?.maxScore > 0 ? (mark.score / mark.assignment.maxScore) * 100 : 0;
+      const assignmentMaxScore = mark.assignment?.maxScore;
+      const percentage = assignmentMaxScore && assignmentMaxScore > 0 ? (mark.score / assignmentMaxScore) * 100 : 0;
       return {
         name: mark.assignment?.title?.slice(0, 10) || "Test",
         score: Number(percentage.toFixed(1)),

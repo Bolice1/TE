@@ -5,7 +5,7 @@
 export interface Student {
   _id: string;
   studentCode: string;
-  studentName: string;
+  name: string;
   className: string;
   year: string;
   parentName?: string;
@@ -27,8 +27,8 @@ export interface StudentListResponse {
 }
 
 export interface StudentCreateRequest {
+  name: string;
   studentCode: string;
-  studentName: string;
   className: string;
   year: string;
   parentName?: string;
@@ -44,22 +44,15 @@ export interface StudentCreateRequest {
 
 export interface Mark {
   _id: string;
-  studentId: string;
-  studentName: string;
-  studentCode: string;
-  assignmentId: string;
-  assignmentTitle: string;
-  courseName: string;
-  courseId: string;
   score: number;
-  maxScore: number;
-  percentage: number;
   term: string;
   year: string;
   comment?: string;
-  recordedAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  student?: Pick<Student, "_id" | "name" | "studentCode" | "className" | "year">;
+  course?: Pick<Course, "_id" | "name" | "className" | "year">;
+  assignment?: Pick<Assignment, "_id" | "title" | "maxScore" | "weight" | "type">;
 }
 
 export interface MarksListResponse {
@@ -146,24 +139,37 @@ export interface AssignmentCreateRequest {
 
 export interface Report {
   _id: string;
-  studentId: string;
-  studentName: string;
-  studentCode: string;
-  className: string;
+  student: string;
   year: string;
   term?: string;
   reportType: 'term' | 'annual';
-  averagePercentage?: number;
+  average?: number;
+  totalScore?: number;
+  totalMaxScore?: number;
   grade?: string;
   performanceBand?: string;
   teacherComment?: string;
   headTeacherComment?: string;
   strengths?: string[];
   weaknesses?: string[];
-  recommendations?: string[];
-  sendToParent?: boolean;
-  sentAt?: Date;
-  competencySummary?: Record<string, { score: number; maxScore: number }>;
+  rank?: number;
+  percentile?: number;
+  competencySummary?: Array<{
+    courseName: string;
+    averagePercentage: number;
+    performanceBand: string;
+  }>;
+  subjectAnalytics?: Array<{
+    courseName: string;
+    score: number;
+    maxScore: number;
+    averagePercentage: number;
+    grade: string;
+  }>;
+  chartMetadata?: {
+    trend: Array<{ label: string; value: number }>;
+    gradeDistribution: Array<{ label: string; value: number }>;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
