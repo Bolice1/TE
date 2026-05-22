@@ -69,6 +69,8 @@ const markSchema = new mongoose.Schema<IMark>(
 );
 
 markSchema.index({ assignment: 1, student: 1 }, { unique: true });
+markSchema.index({ teacher: 1, year: 1, term: 1, student: 1 });
+markSchema.index({ teacher: 1, course: 1, year: 1, term: 1 });
 
 const Marks = mongoose.model<IMark>('Marks', markSchema);
 export default Marks;

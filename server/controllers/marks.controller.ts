@@ -3,7 +3,9 @@ import Assignment from '../models/assignment.model.js';
 import Course from '../models/course.model.js';
 import Marks from '../models/marks.model.js';
 import Student from '../models/student.model.js';
+import envConfiguration from '../config/env.js';
 import { ensureNumber, ensureObjectId, toTrimmedString } from '../middleware/validation.middleware.js';
+import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -16,7 +18,7 @@ export const register = async (req: Request, res: Response) => {
     const courseId = ensureObjectId(req.body.courseId);
     const assignmentId = ensureObjectId(req.body.assignmentId);
     const score = ensureNumber(req.body.score);
-    const term = toTrimmedString(req.body.term);
+    const term = toTrimmedString(req.body.term)?.toUpperCase();
     const year = toTrimmedString(req.body.year);
     const comment = toTrimmedString(req.body.comment);
 
@@ -26,8 +28,12 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
+    if (score < 0) {
+      return res.status(400).json({ message: 'Score cannot be negative.' });
+    }
+
     const [student, course, assignment] = await Promise.all([
-      Student.findOne({ _id: studentId, isDeleted: false }),
+      Student.findOne({ _id: studentId, registeredBy: teacherId, isDeleted: false }),
       Course.findOne({ _id: courseId, teacher: teacherId, isDeleted: false }),
       Assignment.findOne({ _id: assignmentId, teacher: teacherId, isDeleted: false }),
     ]);
@@ -42,6 +48,22 @@ export const register = async (req: Request, res: Response) => {
 
     if (!assignment) {
       return res.status(404).json({ message: 'Assignment not found.' });
+    }
+
+    if (String(assignment.course) !== courseId) {
+      return res.status(400).json({ message: 'Assignment does not belong to the selected course.' });
+    }
+
+    if (student.className !== course.className || student.year !== course.year) {
+      return res.status(400).json({
+        message: 'Student class and year must match the selected course.',
+      });
+    }
+
+    if (assignment.className !== course.className || assignment.year !== course.year) {
+      return res.status(400).json({
+        message: 'Assignment class and year must match the selected course.',
+      });
     }
 
     if (score > assignment.maxScore) {
@@ -64,11 +86,20 @@ export const register = async (req: Request, res: Response) => {
 
     const registered = await Marks.create(markPayload);
 
+    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'marks'));
+    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
+
     return res.status(201).json({
       message: 'Student mark saved successfully.',
       mark: registered,
     });
   } catch (error) {
+    if ((error as { code?: number }).code === 11000) {
+      return res.status(409).json({
+        message: 'A mark for this student and assignment already exists.',
+      });
+    }
+
     return res.status(500).json({
       message: 'Failed to save student mark.',
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -93,6 +124,10 @@ export const update = async (req: Request, res: Response) => {
 
     if (score === null && comment === null) {
       return res.status(400).json({ message: 'Provide a score or comment to update.' });
+    }
+
+    if (score !== null && score < 0) {
+      return res.status(400).json({ message: 'Score cannot be negative.' });
     }
 
     const mark = await Marks.findOne({
@@ -123,6 +158,9 @@ export const update = async (req: Request, res: Response) => {
 
     await mark.save();
 
+    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'marks'));
+    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
+
     return res.status(200).json({
       message: 'Marks updated successfully.',
       mark,
@@ -142,9 +180,23 @@ export const listMarks = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Authentication is required.' });
     }
 
-    const term = toTrimmedString(req.query.term);
+    const term = toTrimmedString(req.query.term)?.toUpperCase();
     const year = toTrimmedString(req.query.year);
     const className = toTrimmedString(req.query.className);
+    const studentId = ensureObjectId(req.query.studentId);
+    const courseId = ensureObjectId(req.query.courseId);
+    const cacheKey = `${buildTeacherCachePrefix(teacherId, 'marks')}:${JSON.stringify({
+      term,
+      year,
+      className,
+      studentId,
+      courseId,
+    })}`;
+    const cachedMarks = appCache.get<{ marks: unknown[] }>(cacheKey);
+
+    if (cachedMarks) {
+      return res.status(200).json(cachedMarks);
+    }
 
     const query: Record<string, unknown> = {
       teacher: teacherId,
@@ -153,6 +205,8 @@ export const listMarks = async (req: Request, res: Response) => {
 
     if (term) query.term = term;
     if (year) query.year = year;
+    if (studentId) query.student = studentId;
+    if (courseId) query.course = courseId;
 
     const marks = await Marks.find(query)
       .populate('student', 'name studentCode className year')
@@ -167,9 +221,12 @@ export const listMarks = async (req: Request, res: Response) => {
         })
       : marks;
 
-    return res.status(200).json({
+    const payload = {
       marks: filteredMarks,
-    });
+    };
+    appCache.set(cacheKey, payload, envConfiguration.cacheTtlMs);
+
+    return res.status(200).json(payload);
   } catch (error) {
     return res.status(500).json({
       message: 'Failed to fetch marks.',

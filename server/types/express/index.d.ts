@@ -7,6 +7,8 @@ declare global {
       email: string;
       role: 'teacher';
       name: string;
+      coachingName: string;
+      sessionId: string;
     }
 
     interface Request {

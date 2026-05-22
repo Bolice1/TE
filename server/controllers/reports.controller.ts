@@ -1,184 +1,119 @@
 import type { Request, Response } from 'express';
-import Marks from '../models/marks.model.js';
 import Reports from '../models/reports.model.js';
-import Student from '../models/student.model.js';
-import { ensureObjectId, toTrimmedString } from '../middleware/validation.middleware.js';
+import envConfiguration from '../config/env.js';
+import { ensureObjectId, ensureStringArray, toTrimmedString } from '../middleware/validation.middleware.js';
+import { generateStudentReport } from '../services/report.service.js';
+import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
+import { sendParentReportEmail } from '../utils/report.email.js';
+import { writeAuditLog } from '../services/audit.service.js';
 
-const getGrade = (average: number): string => {
-  if (average >= 85) return 'A';
-  if (average >= 70) return 'B';
-  if (average >= 55) return 'C';
-  if (average >= 40) return 'D';
-  return 'F';
-};
-
-const buildReportHtml = (params: {
-  studentName: string;
-  studentCode: string;
-  className: string;
-  year: string;
-  term: string;
-  schoolName: string;
-  marks: Array<{ courseName: string; assignmentTitle: string; score: number; maxScore: number; comment?: string }>;
-  totalScore: number;
-  average: number;
-  grade: string;
-}) => {
-  const rows = params.marks
-    .map(
-      (item) => `
-        <tr>
-          <td>${item.courseName}</td>
-          <td>${item.assignmentTitle}</td>
-          <td>${item.score}</td>
-          <td>${item.maxScore}</td>
-          <td>${item.comment ?? '-'}</td>
-        </tr>
-      `,
-    )
-    .join('');
-
-  return `
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <title>${params.studentName} Report</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 40px; color: #1f2937; }
-          h1, h2 { margin-bottom: 8px; }
-          .meta { margin-bottom: 24px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { border: 1px solid #d1d5db; padding: 10px; text-align: left; }
-          th { background: #f3f4f6; }
-          .summary { margin-top: 24px; font-size: 16px; }
-        </style>
-      </head>
-      <body>
-        <h1>${params.schoolName}</h1>
-        <h2>Student Report Card</h2>
-        <div class="meta">
-          <p><strong>Student:</strong> ${params.studentName}</p>
-          <p><strong>Student Code:</strong> ${params.studentCode}</p>
-          <p><strong>Class:</strong> ${params.className}</p>
-          <p><strong>Academic Year:</strong> ${params.year}</p>
-          <p><strong>Term:</strong> ${params.term}</p>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Course</th>
-              <th>Assignment</th>
-              <th>Score</th>
-              <th>Max Score</th>
-              <th>Comment</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div class="summary">
-          <p><strong>Total Score:</strong> ${params.totalScore}</p>
-          <p><strong>Average:</strong> ${params.average.toFixed(2)}</p>
-          <p><strong>Grade:</strong> ${params.grade}</p>
-        </div>
-      </body>
-    </html>
-  `;
+const invalidateReportCache = (teacherId: string) => {
+  appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
 };
 
 export const generateReport = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     const teacherName = req.user?.name;
-    if (!teacherId || !teacherName) {
+    const schoolName = req.user?.coachingName;
+
+    if (!teacherId || !teacherName || !schoolName) {
       return res.status(401).json({ message: 'Authentication is required.' });
     }
 
     const studentId = ensureObjectId(req.params.studentId);
-    const term = toTrimmedString(req.query.term);
     const year = toTrimmedString(req.query.year);
+    const reportType = toTrimmedString(req.query.reportType)?.toLowerCase() === 'annual' ? 'annual' : 'term';
+    const term = reportType === 'term' ? toTrimmedString(req.query.term)?.toUpperCase() : undefined;
 
-    if (!studentId || !term || !year) {
+    if (!studentId || !year || (reportType === 'term' && !term)) {
       return res.status(400).json({
-        message: 'Student id, term, and year are required.',
+        message: 'Student id, year, and term are required for term report generation.',
       });
     }
 
-    const [student, marks] = await Promise.all([
-      Student.findOne({ _id: studentId, isDeleted: false }),
-      Marks.find({
-        student: studentId,
-        teacher: teacherId,
-        term,
-        year,
-        isDeleted: false,
-      })
-        .populate('course', 'name')
-        .populate('assignment', 'title maxScore'),
-    ]);
+    const teacherComment = toTrimmedString(req.body.teacherComment) ?? undefined;
+    const headTeacherComment = toTrimmedString(req.body.headTeacherComment) ?? undefined;
+    const strengths = ensureStringArray(req.body.strengths);
+    const weaknesses = ensureStringArray(req.body.weaknesses);
+    const sendToParent = req.body.sendToParent === true;
 
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found.' });
-    }
-
-    if (!marks.length) {
-      return res.status(404).json({ message: 'No marks found for this student, term, and year.' });
-    }
-
-    const totalScore = marks.reduce((sum, mark) => sum + mark.score, 0);
-    const average = totalScore / marks.length;
-    const grade = getGrade(average);
-
-    const formattedMarks = marks.map((mark) => ({
-      courseName: (mark.course as unknown as { name: string }).name,
-      assignmentTitle: (mark.assignment as unknown as { title: string }).title,
-      score: mark.score,
-      maxScore: (mark.assignment as unknown as { maxScore: number }).maxScore,
-      ...(mark.comment ? { comment: mark.comment } : {}),
-    }));
-
-    const html = buildReportHtml({
-      studentName: student.name,
-      studentCode: student.studentCode,
-      className: student.className,
+    const { report, pdfBuffer, reportPayload } = await generateStudentReport({
+      teacherId,
+      teacherName,
+      schoolName,
+      studentId,
       year,
-      term,
-      schoolName: teacherName,
-      marks: formattedMarks,
-      totalScore,
-      average,
-      grade,
+      reportType,
+      ...(term ? { term } : {}),
+      ...(teacherComment ? { teacherComment } : {}),
+      ...(headTeacherComment ? { headTeacherComment } : {}),
+      ...(strengths.length ? { strengths } : {}),
+      ...(weaknesses.length ? { weaknesses } : {}),
     });
 
-    const report = await Reports.findOneAndUpdate(
-      { student: studentId, teacher: teacherId, year, term },
-      {
-        $set: {
-          average,
-          totalScore,
-          grade,
-          html,
-          student: studentId,
-          teacher: teacherId,
-          year,
-          term,
-          isDeleted: false,
-          deletedAt: null,
-        },
+    invalidateReportCache(teacherId);
+    await writeAuditLog({
+      req,
+      teacherId,
+      action: 'report_generate',
+      entityType: 'report',
+      entityId: report.id,
+      status: 'success',
+      metadata: {
+        reportType,
+        year,
+        term,
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
-    );
+    }).catch(() => undefined);
+
+    let emailDelivery: { delivered: boolean } | undefined;
+    if (sendToParent) {
+      const parentEmail = (await Reports.populate(report, { path: 'student', select: 'parentEmail parentName name' })) as unknown as {
+        student: { parentEmail?: string; parentName: string; name: string };
+      };
+      if (parentEmail.student.parentEmail) {
+        emailDelivery = await sendParentReportEmail({
+          parentEmail: parentEmail.student.parentEmail,
+          parentName: parentEmail.student.parentName,
+          studentName: parentEmail.student.name,
+          reportTitle: reportPayload.reportTitle,
+          pdfBuffer,
+        }).catch(() => ({ delivered: false }));
+      }
+    }
 
     return res.status(200).json({
       message: 'Report generated successfully.',
       report,
       summary: {
-        totalScore,
-        average,
-        grade,
+        totalScore: report.totalScore,
+        totalMaxScore: report.totalMaxScore,
+        average: report.average,
+        grade: report.grade,
+        rank: report.rank,
+        percentile: report.percentile,
       },
+      download: {
+        url: `/api/reports/${studentId}/download?year=${encodeURIComponent(year)}${
+          term ? `&term=${encodeURIComponent(term)}` : ''
+        }&reportType=${reportType}`,
+      },
+      ...(emailDelivery ? { emailDelivery } : {}),
     });
   } catch (error) {
+    const year = toTrimmedString(req.query.year);
+    const term = toTrimmedString(req.query.term);
+    const entityId = typeof req.params.studentId === 'string' ? req.params.studentId : undefined;
+    await writeAuditLog({
+      req,
+      ...(req.user?.id ? { teacherId: req.user.id } : {}),
+      action: 'report_generate',
+      entityType: 'report',
+      ...(entityId ? { entityId } : {}),
+      status: 'failure',
+      metadata: { year, term },
+    }).catch(() => undefined);
     return res.status(500).json({
       message: 'Failed to generate student report.',
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -194,22 +129,28 @@ export const printReport = async (req: Request, res: Response) => {
     }
 
     const studentId = ensureObjectId(req.params.studentId);
-    const term = toTrimmedString(req.query.term);
+    const term = toTrimmedString(req.query.term)?.toUpperCase();
     const year = toTrimmedString(req.query.year);
+    const reportType = toTrimmedString(req.query.reportType)?.toLowerCase() === 'annual' ? 'annual' : 'term';
 
-    if (!studentId || !term || !year) {
+    if (!studentId || !year || (reportType === 'term' && !term)) {
       return res.status(400).json({
-        message: 'Student id, term, and year are required.',
+        message: 'Student id, year, and term are required.',
       });
     }
 
-    const report = await Reports.findOne({
+    const reportQuery: Record<string, unknown> = {
       student: studentId,
       teacher: teacherId,
-      term,
       year,
+      reportType,
       isDeleted: false,
-    });
+    };
+    if (reportType === 'term' && term) {
+      reportQuery.term = term;
+    }
+
+    const report = await Reports.findOne(reportQuery);
 
     if (!report) {
       return res.status(404).json({
@@ -222,6 +163,167 @@ export const printReport = async (req: Request, res: Response) => {
   } catch (error) {
     return res.status(500).json({
       message: 'Failed to print report.',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+export const downloadReport = async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.user?.id;
+    const teacherName = req.user?.name;
+    const schoolName = req.user?.coachingName;
+    if (!teacherId || !teacherName || !schoolName) {
+      return res.status(401).json({ message: 'Authentication is required.' });
+    }
+
+    const studentId = ensureObjectId(req.params.studentId);
+    const year = toTrimmedString(req.query.year);
+    const reportType = toTrimmedString(req.query.reportType)?.toLowerCase() === 'annual' ? 'annual' : 'term';
+    const term = reportType === 'term' ? toTrimmedString(req.query.term)?.toUpperCase() : undefined;
+
+    if (!studentId || !year || (reportType === 'term' && !term)) {
+      return res.status(400).json({ message: 'Student id, year, and term are required.' });
+    }
+
+    const { pdfBuffer } = await generateStudentReport({
+      teacherId,
+      teacherName,
+      schoolName,
+      studentId,
+      year,
+      reportType,
+      ...(term ? { term } : {}),
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="report-${studentId}-${year}-${reportType}.pdf"`);
+    return res.status(200).send(pdfBuffer);
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Failed to download report.',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+export const sendReportToParent = async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.user?.id;
+    const teacherName = req.user?.name;
+    const schoolName = req.user?.coachingName;
+    if (!teacherId || !teacherName || !schoolName) {
+      return res.status(401).json({ message: 'Authentication is required.' });
+    }
+
+    const studentId = ensureObjectId(req.params.studentId);
+    const year = toTrimmedString(req.query.year);
+    const reportType = toTrimmedString(req.query.reportType)?.toLowerCase() === 'annual' ? 'annual' : 'term';
+    const term = reportType === 'term' ? toTrimmedString(req.query.term)?.toUpperCase() : undefined;
+
+    if (!studentId || !year || (reportType === 'term' && !term)) {
+      return res.status(400).json({ message: 'Student id, year, and term are required.' });
+    }
+
+    const teacherComment = toTrimmedString(req.body.teacherComment);
+    const headTeacherComment = toTrimmedString(req.body.headTeacherComment);
+    const strengths = ensureStringArray(req.body.strengths);
+    const weaknesses = ensureStringArray(req.body.weaknesses);
+
+    const { pdfBuffer, reportPayload } = await generateStudentReport({
+      teacherId,
+      teacherName,
+      schoolName,
+      studentId,
+      year,
+      reportType,
+      ...(term ? { term } : {}),
+      ...(teacherComment ? { teacherComment } : {}),
+      ...(headTeacherComment ? { headTeacherComment } : {}),
+      ...(strengths.length ? { strengths } : {}),
+      ...(weaknesses.length ? { weaknesses } : {}),
+    });
+
+    const reportQuery: Record<string, unknown> = {
+      student: studentId,
+      teacher: teacherId,
+      year,
+      reportType,
+      isDeleted: false,
+    };
+    if (reportType === 'term' && term) {
+      reportQuery.term = term;
+    }
+
+    const report = await Reports.findOne(reportQuery).populate('student', 'parentEmail parentName name');
+
+    const student = report?.student as unknown as { parentEmail?: string; parentName: string; name: string } | undefined;
+    if (!student?.parentEmail) {
+      return res.status(400).json({ message: 'Parent email is not available for this student.' });
+    }
+
+    const emailDelivery = await sendParentReportEmail({
+      parentEmail: student.parentEmail,
+      parentName: student.parentName,
+      studentName: student.name,
+      reportTitle: reportPayload.reportTitle,
+      pdfBuffer,
+    });
+
+    return res.status(200).json({
+      message: 'Report sent to parent successfully.',
+      emailDelivery,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Failed to send report to parent.',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
+
+export const listReports = async (req: Request, res: Response) => {
+  try {
+    const teacherId = req.user?.id;
+    if (!teacherId) {
+      return res.status(401).json({ message: 'Authentication is required.' });
+    }
+
+    const year = toTrimmedString(req.query.year);
+    const term = toTrimmedString(req.query.term)?.toUpperCase();
+    const studentId = ensureObjectId(req.query.studentId);
+    const reportType = toTrimmedString(req.query.reportType)?.toLowerCase();
+    const cacheKey = `${buildTeacherCachePrefix(teacherId, 'reports')}:${JSON.stringify({
+      year,
+      term,
+      studentId,
+      reportType,
+    })}`;
+    const cached = appCache.get<{ reports: unknown[] }>(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    const query: Record<string, unknown> = {
+      teacher: teacherId,
+      isDeleted: false,
+    };
+
+    if (year) query.year = year;
+    if (term) query.term = term;
+    if (studentId) query.student = studentId;
+    if (reportType === 'annual' || reportType === 'term') query.reportType = reportType;
+
+    const reports = await Reports.find(query)
+      .populate('student', 'name studentCode className year parentName')
+      .sort({ updatedAt: -1 });
+
+    const payload = { reports };
+    appCache.set(cacheKey, payload, envConfiguration.cacheTtlMs);
+    return res.status(200).json(payload);
+  } catch (error) {
+    return res.status(500).json({
+      message: 'Failed to fetch reports.',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }

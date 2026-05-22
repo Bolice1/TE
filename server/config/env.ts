@@ -28,11 +28,13 @@ export const envConfiguration = {
   emailUser: readEnv('EMAIL_USER', 'email_user'),
   emailPass: readEnv('EMAIL_PASS', 'email_pass'),
   emailService: readEnv('EMAIL_SERVICE', 'email_service'),
+  redisUrl: readEnv('REDIS_URL', 'redis_url'),
   jwtToken: readEnv('JWT_TOKEN', 'jwt_token', 'jtw_token'),
   refreshToken: readEnv('REFRESH_TOKEN', 'refresh_token'),
   db: readEnv('DB', 'db'),
   tokenExpiresIn: readEnv('TOKEN_EXPIRES_IN', 'tokenExpiresIn', 'token-expires_in') || '1d',
   otpExpiresAtMs: readNumber(300000, 'OTP_EXPIRES_AT', 'expires_at'),
+  cacheTtlMs: readNumber(30000, 'CACHE_TTL_MS', 'cache_ttl_ms'),
 };
 
 if (!envConfiguration.jwtToken || !envConfiguration.db) {

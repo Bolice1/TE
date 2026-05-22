@@ -5,6 +5,7 @@ export interface IStudent {
   studentCode: string;
   className: string;
   year: string;
+  dateOfBirth?: Date;
   parentName: string;
   parentEmail?: string;
   parentPhone?: string;
@@ -36,6 +37,9 @@ const studentSchema = new mongoose.Schema<IStudent>(
       type: String,
       required: true,
       trim: true,
+    },
+    dateOfBirth: {
+      type: Date,
     },
     parentName: {
       type: String,
@@ -69,6 +73,8 @@ const studentSchema = new mongoose.Schema<IStudent>(
     timestamps: true,
   },
 );
+
+studentSchema.index({ registeredBy: 1, className: 1, year: 1 });
 
 const Student = mongoose.model<IStudent>('Student', studentSchema);
 export default Student;

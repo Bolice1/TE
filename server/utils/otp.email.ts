@@ -1,28 +1,7 @@
-import nodemailer from 'nodemailer';
-import envConfiguration from '../config/env.js';
-
-const transporter =
-  envConfiguration.emailUser && envConfiguration.emailPass
-    ? nodemailer.createTransport({
-        service: envConfiguration.emailService || 'gmail',
-        auth: {
-          user: envConfiguration.emailUser,
-          pass: envConfiguration.emailPass,
-        },
-      })
-    : null;
+import { deliverEmail } from './email.js';
 
 export const sendOtpEmail = async (email: string, otp: string) => {
-  if (!transporter) {
-    console.warn(`Email transporter not configured. OTP for ${email}: ${otp}`);
-    return {
-      delivered: false,
-      preview: otp,
-    };
-  }
-
-  await transporter.sendMail({
-    from: envConfiguration.emailUser,
+  const mailResult = await deliverEmail({
     to: email,
     subject: 'Your TE verification code',
     html: `
@@ -34,6 +13,14 @@ export const sendOtpEmail = async (email: string, otp: string) => {
       </div>
     `,
   });
+
+  if (!mailResult.delivered) {
+    console.warn(`Email transporter not configured. OTP for ${email}: ${otp}`);
+    return {
+      delivered: false,
+      preview: otp,
+    };
+  }
 
   return {
     delivered: true,

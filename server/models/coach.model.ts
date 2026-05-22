@@ -5,6 +5,7 @@ export interface ICoach {
   email: string;
   address: string;
   coachingName: string;
+  phoneNumber?: string;
   password: string;
   isEmailVerified: boolean;
   isDeleted: boolean;
@@ -33,6 +34,10 @@ const coachSchema = new mongoose.Schema<ICoach>(
     coachingName: {
       type: String,
       required: true,
+      trim: true,
+    },
+    phoneNumber: {
+      type: String,
       trim: true,
     },
     password: {
