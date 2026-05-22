@@ -47,10 +47,21 @@ async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    throw new ApiError(
+      error instanceof Error
+        ? `Unable to reach the backend. ${error.message}`
+        : "Unable to reach the backend.",
+      0
+    );
+  }
 
   if (!response.ok) {
     let errorMsg = "Something went wrong";
