@@ -32,6 +32,11 @@ export default function LoginPage() {
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px]" />
 
       <div className="w-full max-w-md z-10">
+        <div className="mb-6 text-center">
+          <Link href="/" className="text-sm font-semibold text-primary hover:text-primary-hover">
+            ← Back to TE home
+          </Link>
+        </div>
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground font-display">
             TE<span className="text-primary font-normal"> (Teacher Emmy)</span>

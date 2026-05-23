@@ -6,6 +6,7 @@ import {
   gradeFromPercentage,
   performanceBandFromPercentage,
 } from '../utils/analytics.js';
+import { reportDocumentStyles } from '../utils/branding.js';
 import { renderPdfBuffer } from '../utils/pdf.js';
 
 type ReportType = 'term' | 'annual';
@@ -109,34 +110,12 @@ const buildReportHtml = (params: {
     <head>
       <meta charset="UTF-8" />
       <title>${params.reportTitle}</title>
-      <style>
-        :root {
-          --primary: #2563EB;
-          --background: #F8FAFC;
-          --surface: #FFFFFF;
-          --text: #0F172A;
-          --muted: #64748B;
-          --success: #16A34A;
-          --warning: #F59E0B;
-          --danger: #DC2626;
-          --border: #E2E8F0;
-        }
-        body { font-family: Arial, sans-serif; background: var(--background); color: var(--text); margin: 0; padding: 24px; }
-        .sheet { max-width: 1100px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
-        .hero { background: linear-gradient(135deg, #2563EB, #1D4ED8); color: white; padding: 24px; }
-        .content { padding: 24px; }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
-        .card { border: 1px solid var(--border); border-radius: 16px; padding: 12px; }
-        .label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
-        .value { font-size: 17px; font-weight: bold; margin-top: 6px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        th, td { border-top: 1px solid var(--border); padding: 12px; text-align: left; }
-        th { background: #EFF6FF; }
-      </style>
+      <style>${reportDocumentStyles}</style>
     </head>
     <body>
       <div class="sheet">
         <div class="hero">
+          <div class="brand">TE — Teacher Emmy</div>
           <h1>${params.schoolName}</h1>
           <p>${params.reportTitle}</p>
         </div>
@@ -155,11 +134,13 @@ const buildReportHtml = (params: {
             <div class="card"><div class="label">Teacher</div><div class="value">${params.teacherName}</div></div>
             <div class="card"><div class="label">Year</div><div class="value">${params.year}</div></div>
           </div>
-          <p><strong>Total Score:</strong> ${params.totalScore.toFixed(2)} / ${params.totalMaxScore.toFixed(2)}</p>
-          <p><strong>Strengths:</strong> ${params.strengths.join(', ') || '-'}</p>
-          <p><strong>Weaknesses:</strong> ${params.weaknesses.join(', ') || '-'}</p>
-          <p><strong>Teacher Comment:</strong> ${params.teacherComment ?? '-'}</p>
-          <p><strong>Head Teacher Comment:</strong> ${params.headTeacherComment ?? '-'}</p>
+          <div class="notes">
+            <p><strong>Total Score:</strong> ${params.totalScore.toFixed(2)} / ${params.totalMaxScore.toFixed(2)}</p>
+            <p><strong>Strengths:</strong> ${params.strengths.join(', ') || '-'}</p>
+            <p><strong>Weaknesses:</strong> ${params.weaknesses.join(', ') || '-'}</p>
+            <p><strong>Teacher Comment:</strong> ${params.teacherComment ?? '-'}</p>
+            <p><strong>Head Teacher Comment:</strong> ${params.headTeacherComment ?? '-'}</p>
+          </div>
           <table>
             <thead>
               <tr><th>Subject</th><th>Average</th><th>Grade</th><th>Band</th></tr>

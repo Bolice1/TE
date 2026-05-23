@@ -25,6 +25,7 @@
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-border: var(--border);
+  --color-primary-hover: var(--primary-hover);
 
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-display: var(--font-outfit), var(--font-sans);
