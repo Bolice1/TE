@@ -81,11 +81,8 @@ async function request<T>(
       headers,
     });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : "Network error";
     throw new ApiError(
-      `Unable to reach the backend (${detail}). ` +
-        "Ensure the app uses /api and BACKEND_API_URL is set — open /api/status to diagnose.",
-      0
+      `Unable to reach the backend. `, 0,
     );
   }
 

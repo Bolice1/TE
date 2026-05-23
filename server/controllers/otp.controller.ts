@@ -53,7 +53,7 @@ export const requestSignupOtp = async (req: Request, res: Response) => {
       await deleteOtp({ email, purpose: 'teacher-signup' });
       console.error('OTP email delivery failed.', getEmailTransportDebugInfo());
       return res.status(503).json({
-        message: 'Unable to send verification code right now. Please try again later.',
+        message: 'something went wrong. Please try again later.',
       });
     }
 
@@ -65,7 +65,7 @@ export const requestSignupOtp = async (req: Request, res: Response) => {
     });
   } catch (error) {
     return res.status(500).json({
-      message: 'Failed to generate OTP.',
+      message: 'something went wrong.',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
