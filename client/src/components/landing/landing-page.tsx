@@ -9,9 +9,9 @@ import { QuoteSection } from "./quote-section";
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <LandingNavbar />
-      <main>
+      <main className="flex-1">
         <HeroSection />
         <QuoteSection />
         <FeaturesSection />

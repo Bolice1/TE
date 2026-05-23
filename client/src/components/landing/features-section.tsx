@@ -1,34 +1,34 @@
 "use client";
 
-import { BarChart3, BookOpen, FileText, Mail, Medal, School } from "lucide-react";
+import { BarChart3, BookOpen, ClipboardList, FileText, Mail, Users } from "lucide-react";
 import { SectionHeading } from "./section-heading";
 import { FeatureCard } from "./feature-card";
 
 const features = [
   {
-    icon: BarChart3,
-    title: "Analytics Dashboard",
-    description: "Monitor class trends, grade distribution, and performance signals in real time.",
-  },
-  {
-    icon: FileText,
-    title: "Report Cards",
-    description: "Generate official term and annual report cards with structured academic commentary.",
-  },
-  {
-    icon: Medal,
-    title: "Rankings & Intervention",
-    description: "Identify top performers and students who need support with ranked insights.",
-  },
-  {
-    icon: School,
-    title: "Class Analytics",
-    description: "Compare classes and courses with CBC-aligned educational intelligence.",
+    icon: Users,
+    title: "Student Directory",
+    description: "Register learners, manage class rosters, and keep parent contact details organized.",
   },
   {
     icon: BookOpen,
     title: "Assignments & Marks",
     description: "Plan assessments, record marks, and align tasks with classroom outcomes.",
+  },
+  {
+    icon: BarChart3,
+    title: "Class Insights",
+    description: "View performance trends and grade distribution to guide teaching decisions.",
+  },
+  {
+    icon: FileText,
+    title: "Report Cards",
+    description: "Generate official term and annual report cards with structured commentary.",
+  },
+  {
+    icon: ClipboardList,
+    title: "Competency Reporting",
+    description: "Document strengths, focus areas, and CBC-aligned learner progress.",
   },
   {
     icon: Mail,
@@ -39,16 +39,15 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="py-20 sm:py-24 bg-background">
+    <section id="features" className="scroll-mt-20 border-t border-border bg-background py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          id="features-heading"
           eyebrow="Platform capabilities"
-          title="Everything teachers need to lead with data"
-          description="From classroom analytics to parent-ready report cards, TE keeps your academic operations precise, fast, and professional."
+          title="Built for everyday classroom leadership"
+          description="Every tool in TE supports a clear teacher workflow — from student records to parent-ready reports."
         />
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
           {features.map((feature, index) => (
             <FeatureCard key={feature.title} {...feature} index={index} />
           ))}

@@ -1,5 +1,11 @@
-import { buildWelcomeEmailHtml } from './branding.js';
+import envConfiguration from '../config/env.js';
+import { buildWelcomeEmailHtml, TE_BRAND } from './branding.js';
 import { deliverEmail } from './email.js';
+
+const buildSignInUrl = () => {
+  const base = envConfiguration.frontendUrl?.replace(/\/+$/, '');
+  return base ? `${base}/auth/login` : '';
+};
 
 export const sendTeacherWelcomeEmail = async (params: {
   email: string;
@@ -7,10 +13,15 @@ export const sendTeacherWelcomeEmail = async (params: {
   coachingName: string;
 }) => {
   const { email, teacherName, coachingName } = params;
+  const signInUrl = buildSignInUrl();
 
   return deliverEmail({
     to: email,
-    subject: `Welcome to ${coachingName}`,
-    html: buildWelcomeEmailHtml({ teacherName, coachingName }),
+    subject: `Welcome to ${TE_BRAND.fullName}`,
+    html: buildWelcomeEmailHtml({
+      teacherName,
+      coachingName,
+      ...(signInUrl ? { signInUrl } : {}),
+    }),
   });
 };

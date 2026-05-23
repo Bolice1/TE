@@ -7,7 +7,7 @@ import { brand } from "@/lib/brand";
 
 export function CtaSection() {
   return (
-    <section className="pb-20 sm:pb-24">
+    <section className="border-t border-border py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 18 }}

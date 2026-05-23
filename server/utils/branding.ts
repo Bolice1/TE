@@ -17,6 +17,25 @@ export const TE_BRAND = {
 
 const { colors } = TE_BRAND;
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+export const buildEmailButton = (href: string, label: string) => `
+  <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px auto 4px;">
+    <tr>
+      <td style="border-radius:12px;background:${colors.primary};">
+        <a href="${escapeHtml(href)}" style="display:inline-block;padding:13px 28px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">
+          ${escapeHtml(label)}
+        </a>
+      </td>
+    </tr>
+  </table>
+`;
+
 export const wrapEmailHtml = (params: {
   title: string;
   body: string;
@@ -92,16 +111,49 @@ export const buildParentReportEmailHtml = (params: {
     `,
   });
 
-export const buildWelcomeEmailHtml = (params: { teacherName: string; coachingName: string }) =>
-  wrapEmailHtml({
-    title: `Welcome to ${params.coachingName}`,
-    previewText: `Your ${TE_BRAND.fullName} workspace is ready`,
+export const buildWelcomeEmailHtml = (params: {
+  teacherName: string;
+  coachingName: string;
+  signInUrl?: string;
+}) => {
+  const teacherName = escapeHtml(params.teacherName);
+  const coachingName = escapeHtml(params.coachingName);
+  const signInBlock = params.signInUrl
+    ? buildEmailButton(params.signInUrl, 'Open your workspace')
+    : '';
+
+  return wrapEmailHtml({
+    title: `Welcome to ${TE_BRAND.fullName}`,
+    previewText: `Your ${TE_BRAND.fullName} workspace for ${params.coachingName} is ready`,
     body: `
-      <p style="margin:0 0 12px;">Hello ${params.teacherName},</p>
-      <p style="margin:0 0 12px;">Your teacher workspace for <strong>${params.coachingName}</strong> is ready.</p>
-      <p style="margin:0;color:${colors.muted};font-size:14px;">Sign in to manage students, assignments, marks, analytics, and report cards.</p>
+      <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${colors.muted};">
+        Welcome
+      </p>
+      <p style="margin:0 0 14px;font-size:18px;font-weight:700;color:${colors.text};">
+        Hello ${teacherName},
+      </p>
+      <p style="margin:0 0 16px;">
+        Your <strong>${coachingName}</strong> workspace on ${TE_BRAND.fullName} is ready.
+      </p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 20px;border:1px solid ${colors.border};border-radius:14px;background:${colors.background};">
+        <tr>
+          <td style="padding:16px 18px;">
+            <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:${colors.text};">You can now:</p>
+            <ul style="margin:0;padding-left:18px;color:${colors.text};font-size:14px;line-height:1.7;">
+              <li>Register students and manage class rosters</li>
+              <li>Record assignments and marks</li>
+              <li>Generate and send report cards to parents</li>
+            </ul>
+          </td>
+        </tr>
+      </table>
+      ${signInBlock}
+      <p style="margin:16px 0 0;text-align:center;color:${colors.muted};font-size:13px;">
+        ${signInBlock ? 'Sign in to continue where you left off.' : 'Sign in to your TE workspace to get started.'}
+      </p>
     `,
   });
+};
 
 export const reportDocumentStyles = `
   :root {

@@ -10,7 +10,6 @@ import { cn } from "@/lib/cn";
 
 const navLinks = [
   { href: "#features", label: "Features" },
-  { href: "#analytics", label: "Analytics" },
   { href: "#quote", label: "Vision" },
 ];
 
