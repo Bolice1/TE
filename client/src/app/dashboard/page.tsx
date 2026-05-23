@@ -25,15 +25,10 @@ import {
   TrendingUp,
   Award,
   AlertTriangle,
-  ArrowRight,
   TrendingDown,
-  Calendar,
   Sparkles,
-  FileText,
-  Clock,
   Loader2,
 } from "lucide-react";
-import Link from "next/link";
 
 export default function DashboardPage() {
   const { academicYear, term, className, courseId } = useFilters();
@@ -48,9 +43,7 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Loader2 className="w-8 h-8 text-primary animate-spin mb-3" />
-        <p className="text-sm text-muted-text font-medium">
-          Running analytics engine aggregates...
-        </p>
+        <p className="text-sm text-muted-text font-medium">Loading dashboard...</p>
       </div>
     );
   }
@@ -61,7 +54,7 @@ export default function DashboardPage() {
         <AlertTriangle className="w-10 h-10 text-danger mx-auto mb-3" />
         <h3 className="text-lg font-bold text-foreground mb-1">Failed to load analytics</h3>
         <p className="text-sm text-muted-text">
-          Double check your database or server connection. Add some courses, assignments, and marks first to see calculations.
+          Check your connection, then add students, courses, assignments, and marks to populate analytics.
         </p>
       </div>
     );
@@ -80,8 +73,6 @@ export default function DashboardPage() {
       weakestStudents: [],
       classes: [],
     },
-    recentActivity = [],
-    upcomingAssignments = [],
     recommendations = {
       studentsNeedingIntervention: [],
       weakClasses: [],
@@ -320,65 +311,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4. RECENT ACTIVITY & UPCOMING ASSIGNMENTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Grading Actions */}
-        <div className="bg-surface border border-border p-6 rounded-2xl shadow-sm">
-          <h3 className="text-base font-bold text-foreground mb-6">Recent Grading Activity</h3>
-          <div className="space-y-4">
-            {recentActivity && recentActivity.length > 0 ? (
-              recentActivity.slice(0, 5).map((act: any, idx: number) => (
-                <div key={idx} className="flex items-start gap-4 py-2">
-                  <div className="p-2 bg-primary/10 rounded-lg text-primary shrink-0 mt-0.5">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-foreground truncate">{act.title}</h4>
-                    <p className="text-[10px] text-muted-text">{act.subtitle} • {new Date(act.createdAt).toLocaleString()}</p>
-                  </div>
-                  <span className="text-xs font-bold text-foreground bg-background px-2.5 py-1 rounded-lg border border-border shrink-0">
-                    {act.score}/{act.maxScore}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-xs text-muted-text text-center py-10">
-                No grading activities recorded yet.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Upcoming Assessments */}
-        <div className="bg-surface border border-border p-6 rounded-2xl shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-base font-bold text-foreground">Upcoming Assessments</h3>
-            <span className="text-xs font-bold text-primary">Scheduled Timeline</span>
-          </div>
-          <div className="space-y-4">
-            {upcomingAssignments && upcomingAssignments.length > 0 ? (
-              upcomingAssignments.slice(0, 5).map((assign: any) => (
-                <div key={assign.assignmentId} className="flex items-center justify-between p-3 bg-background border border-border rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-primary shrink-0" />
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">{assign.title}</h4>
-                      <p className="text-[10px] text-muted-text">{assign.courseName} ({assign.className}) • {assign.type}</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full shrink-0">
-                    Due: {new Date(assign.dueDate).toLocaleDateString()}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-xs text-muted-text text-center py-10">
-                No upcoming assessments scheduled. Use the Assignments Planner to schedule assignments.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -4,10 +4,20 @@ import envConfiguration from '../config/env.js';
 export const corsMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const requestOrigin = req.headers.origin;
   const configuredOrigin = envConfiguration.corsOrigin;
+  const isDev = process.env.NODE_ENV !== 'production';
+  const allowedOrigins = configuredOrigin
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 
-  if (configuredOrigin === '*' || !requestOrigin) {
+  if (!requestOrigin) {
     res.header('Access-Control-Allow-Origin', configuredOrigin === '*' ? '*' : configuredOrigin);
-  } else if (configuredOrigin.split(',').map((value) => value.trim()).includes(requestOrigin)) {
+  } else if (configuredOrigin === '*') {
+    res.header('Access-Control-Allow-Origin', '*');
+  } else if (allowedOrigins.includes(requestOrigin)) {
+    res.header('Access-Control-Allow-Origin', requestOrigin);
+    res.header('Vary', 'Origin');
+  } else if (isDev) {
     res.header('Access-Control-Allow-Origin', requestOrigin);
     res.header('Vary', 'Origin');
   }

@@ -1,4 +1,4 @@
-import { env } from "@/config/env";
+import { buildApiUrl } from "@/lib/api-base";
 import type {
   Student,
   StudentListResponse,
@@ -23,7 +23,17 @@ import type {
   Class,
 } from "@/types/analytics";
 
-const API_URL = env.apiBaseUrl;
+const getAuthHeaders = (extra?: HeadersInit): Headers => {
+  const headers = new Headers(extra);
+  const token = typeof window !== "undefined" ? localStorage.getItem("te_token") : null;
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return headers;
+};
 type ApiSuccessEnvelope<T> = {
   success: true;
   message?: string;
@@ -58,28 +68,23 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("te_token") : null;
-  
-  const headers = new Headers(options.headers);
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-  if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  const headers = getAuthHeaders(options.headers);
+  if (options.body instanceof FormData) {
+    headers.delete("Content-Type");
   }
 
   let response: Response;
 
   try {
-    response = await fetch(`${API_URL}${endpoint}`, {
+    response = await fetch(buildApiUrl(endpoint), {
       ...options,
       headers,
     });
   } catch (error) {
+    const detail = error instanceof Error ? error.message : "Network error";
     throw new ApiError(
-      error instanceof Error
-        ? `Unable to reach the backend. ${error.message}`
-        : "Unable to reach the backend.",
+      `Unable to reach the backend (${detail}). ` +
+        "Ensure the app uses /api and BACKEND_API_URL is set — open /api/status to diagnose.",
       0
     );
   }
@@ -88,10 +93,14 @@ async function request<T>(
     let errorMsg = "Something went wrong";
     try {
       const errBody = await response.json();
+      const hint = typeof errBody.hint === "string" ? errBody.hint : "";
       errorMsg =
         (typeof errBody.message === "string" && errBody.message) ||
         (typeof errBody.msg === "string" && errBody.msg) ||
         errorMsg;
+      if (hint) {
+        errorMsg = `${errorMsg} ${hint}`.trim();
+      }
     } catch {
       // Ignore body parsing failure
     }
@@ -121,6 +130,56 @@ async function request<T>(
   }
 
   return json as T;
+}
+
+export async function fetchAuthenticated(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const headers = getAuthHeaders(options.headers);
+  if (options.body instanceof FormData) {
+    headers.delete("Content-Type");
+  }
+
+  return fetch(buildApiUrl(endpoint), {
+    ...options,
+    headers,
+  });
+}
+
+export async function fetchAuthenticatedHtml(endpoint: string): Promise<string> {
+  const response = await fetchAuthenticated(endpoint);
+  if (!response.ok) {
+    let message = "Failed to load resource.";
+    try {
+      const body = await response.json();
+      message =
+        (typeof body.message === "string" && body.message) ||
+        (typeof body.msg === "string" && body.msg) ||
+        message;
+    } catch {
+      // ignore
+    }
+    throw new ApiError(message, response.status);
+  }
+  return response.text();
+}
+
+export async function fetchAuthenticatedBlob(endpoint: string): Promise<Blob> {
+  const response = await fetchAuthenticated(endpoint);
+  if (!response.ok) {
+    throw new ApiError("Failed to download file.", response.status);
+  }
+  return response.blob();
+}
+
+export function triggerFileDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 // Global Filter Interface
@@ -218,12 +277,18 @@ export const api = {
         body: JSON.stringify(body),
       });
     },
-    printUrl: (studentId: string, queryParams: { year: string; term?: string; reportType: string }) => {
-      return `${API_URL}/reports/${studentId}/print${buildQueryString(queryParams)}`;
-    },
-    downloadBlob: (studentId: string, queryParams: { year: string; term?: string; reportType: string }) => {
-      return request<Blob>(`/reports/${studentId}/download${buildQueryString(queryParams)}`);
-    },
+    printPath: (studentId: string, queryParams: { year: string; term?: string; reportType: string }) =>
+      `/reports/${studentId}/print${buildQueryString(queryParams)}`,
+    downloadPath: (studentId: string, queryParams: { year: string; term?: string; reportType: string }) =>
+      `/reports/${studentId}/download${buildQueryString(queryParams)}`,
+    fetchPrintHtml: (studentId: string, queryParams: { year: string; term?: string; reportType: string }) =>
+      fetchAuthenticatedHtml(
+        `/reports/${studentId}/print${buildQueryString(queryParams)}`
+      ),
+    downloadBlob: (studentId: string, queryParams: { year: string; term?: string; reportType: string }) =>
+      fetchAuthenticatedBlob(
+        `/reports/${studentId}/download${buildQueryString(queryParams)}`
+      ),
     sendEmail: (studentId: string, queryParams: { year: string; term?: string; reportType: string }, body: any) => {
       return request<{ message: string }>(`/reports/${studentId}/send${buildQueryString(queryParams)}`, {
         method: "POST",

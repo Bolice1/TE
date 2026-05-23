@@ -1,0 +1,55 @@
+# Render Blueprint — TE Platform
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: te-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DB
+        sync: false
+      - key: JWT_TOKEN
+        generateValue: true
+      - key: REFRESH_TOKEN
+        generateValue: true
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_SERVICE
+        value: gmail
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: te-redis
+          property: connectionString
+
+  - type: web
+    name: te-web
+    runtime: node
+    rootDir: client
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BACKEND_API_URL
+        fromService:
+          type: web
+          name: te-api
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: /api
+
+  - type: redis
+    name: te-redis
+    plan: free
+    ipAllowList: []

@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import Coach from '../models/coach.model.js';
 import envConfiguration from '../config/env.js';
 import { sendOtpEmail } from '../utils/otp.email.js';
-import { getEmailTransportDebugInfo } from '../utils/email.js';
+import { getEmailTransportDebugInfo, isEmailTransportConfigured } from '../utils/email.js';
 import { isNonEmptyString, isValidEmail, toTrimmedString } from '../middleware/validation.middleware.js';
 import { deleteOtp, readOtp, storeOtp } from '../utils/otp.store.js';
 
@@ -26,6 +26,14 @@ export const requestSignupOtp = async (req: Request, res: Response) => {
     const existingTeacher = await Coach.findOne({ email, isDeleted: false });
     if (existingTeacher) {
       return res.status(409).json({ message: 'A teacher account already exists with that email.' });
+    }
+
+    if (!isEmailTransportConfigured()) {
+      console.error('OTP email unavailable.', getEmailTransportDebugInfo());
+      return res.status(503).json({
+        message:
+          'Email delivery is not configured. Set EMAIL_USER, EMAIL_PASS, and EMAIL_SERVICE (or EMAIL_HOST) on the server.',
+      });
     }
 
     const otp = generateOtp();

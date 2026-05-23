@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  BarChart3,
-  BookOpen,
-  ClipboardList,
-  FileText,
-  Mail,
-  Medal,
-  School,
-  Target,
-  Users,
-} from "lucide-react";
+import { BarChart3, BookOpen, FileText, Mail, Medal, School } from "lucide-react";
 import { SectionHeading } from "./section-heading";
 import { FeatureCard } from "./feature-card";
 
@@ -26,34 +16,19 @@ const features = [
     description: "Generate official term and annual report cards with structured academic commentary.",
   },
   {
-    icon: Target,
-    title: "Performance Tracking",
-    description: "Track marks, competencies, and learning progress across terms and academic years.",
-  },
-  {
     icon: Medal,
-    title: "Rankings & Leaders",
-    description: "Identify top performers and students needing intervention with ranked insights.",
+    title: "Rankings & Intervention",
+    description: "Identify top performers and students who need support with ranked insights.",
   },
   {
     icon: School,
     title: "Class Analytics",
-    description: "Compare classes, courses, and cohorts with CBC-aligned educational intelligence.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Competency Reporting",
-    description: "Capture strengths, weaknesses, and competency summaries for each learner.",
+    description: "Compare classes and courses with CBC-aligned educational intelligence.",
   },
   {
     icon: BookOpen,
-    title: "Assignments & Quizzes",
-    description: "Plan assessments, manage courses, and align tasks with classroom outcomes.",
-  },
-  {
-    icon: Users,
-    title: "Teacher Workflows",
-    description: "Register students, enter marks, and manage your workspace from one platform.",
+    title: "Assignments & Marks",
+    description: "Plan assessments, record marks, and align tasks with classroom outcomes.",
   },
   {
     icon: Mail,

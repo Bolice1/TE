@@ -1,22 +1,9 @@
-import { NextRequest } from "next/server";
-
-const normalizeBackendApiUrl = (value?: string): string | null => {
-  const trimmed = value?.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  const withoutTrailingSlash = trimmed.replace(/\/+$/, "");
-  return withoutTrailingSlash.endsWith("/api")
-    ? withoutTrailingSlash
-    : `${withoutTrailingSlash}/api`;
-};
-
-const getBackendApiUrl = (): string | null =>
-  normalizeBackendApiUrl(
-    process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL
-  );
+import { NextRequest, NextResponse } from "next/server";
+import {
+  buildBackendTargetUrl,
+  getBackendApiUrl,
+  PROXY_FETCH_TIMEOUT_MS,
+} from "@/lib/backend-config";
 
 const proxyRequest = async (
   request: NextRequest,
@@ -24,19 +11,23 @@ const proxyRequest = async (
 ) => {
   const { path } = await context.params;
   const backendApiUrl = getBackendApiUrl();
+
   if (!backendApiUrl) {
-    return Response.json(
+    return NextResponse.json(
       {
         message: "Backend API URL is not configured.",
+        hint: "Set BACKEND_API_URL on the Next.js service (e.g. https://your-api.onrender.com or http://127.0.0.1:4000).",
       },
       { status: 500 }
     );
   }
-  const targetUrl = new URL(`${backendApiUrl}/${path.join("/")}`);
 
-  request.nextUrl.searchParams.forEach((value, key) => {
-    targetUrl.searchParams.append(key, value);
-  });
+  const search = request.nextUrl.search;
+  const targetUrl = buildBackendTargetUrl(path, search);
+
+  if (!targetUrl) {
+    return NextResponse.json({ message: "Invalid proxy target." }, { status: 500 });
+  }
 
   const headers = new Headers(request.headers);
   headers.delete("host");
@@ -47,6 +38,7 @@ const proxyRequest = async (
     method: request.method,
     headers,
     redirect: "manual",
+    signal: AbortSignal.timeout(PROXY_FETCH_TIMEOUT_MS),
   };
 
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -66,11 +58,20 @@ const proxyRequest = async (
       headers: responseHeaders,
     });
   } catch (error) {
-    return Response.json(
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const isTimeout = message.toLowerCase().includes("timeout") || message.includes("aborted");
+    const isRefused = message.includes("ECONNREFUSED");
+
+    return NextResponse.json(
       {
         message: "Unable to reach the backend service.",
+        hint: isRefused
+          ? "Start Express locally (port 4000) or set BACKEND_API_URL to your deployed API URL."
+          : isTimeout
+            ? "The API may be waking up (Render cold start). Retry in a few seconds."
+            : "Verify BACKEND_API_URL is correct and the API service is running.",
         backendApiUrl,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: message,
       },
       { status: 502 }
     );
@@ -78,6 +79,7 @@ const proxyRequest = async (
 };
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export const GET = proxyRequest;
 export const POST = proxyRequest;

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, BarChart3, Sparkles } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
@@ -79,12 +78,6 @@ export function HeroSection() {
               </span>
             </motion.div>
 
-            <p className="mt-6 text-sm text-muted-text">
-              Already using TE?{" "}
-              <Link href="/auth/login" className="font-semibold text-primary hover:text-primary-hover">
-                Sign in to your workspace
-              </Link>
-            </p>
           </div>
 
           <DashboardMockup />

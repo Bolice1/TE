@@ -1,6 +1,5 @@
 "use client";
 
-import { AnalyticsShowcase } from "./analytics-showcase";
 import { CtaSection } from "./cta-section";
 import { FeaturesSection } from "./features-section";
 import { HeroSection } from "./hero-section";
@@ -16,7 +15,6 @@ export function LandingPage() {
         <HeroSection />
         <QuoteSection />
         <FeaturesSection />
-        <AnalyticsShowcase />
         <CtaSection />
       </main>
       <LandingFooter />
