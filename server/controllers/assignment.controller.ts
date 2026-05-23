@@ -9,7 +9,7 @@ import {
   ensureStringArray,
   toTrimmedString,
 } from '../middleware/validation.middleware.js';
-import { appCache, buildTeacherCachePrefix, invalidateTeacherDomains } from '../utils/cache.js';
+import { buildTeacherCachePrefix, invalidateTeacherDomains, readListCache, writeListCache } from '../utils/cache.js';
 import { getCurrentAcademicYear, isHistoricalAcademicYear } from '../utils/academic-year.js';
 
 export const createAssignment = async (req: Request, res: Response) => {
@@ -234,7 +234,7 @@ export const listAssignments = async (req: Request, res: Response) => {
       courseId,
       type,
     })}`;
-    const cachedAssignments = appCache.get<{ assignments: unknown[]; courses: unknown[] }>(cacheKey);
+    const cachedAssignments = await readListCache<{ assignments: unknown[]; courses: unknown[] }>(cacheKey);
 
     if (cachedAssignments) {
       return res.status(200).json(cachedAssignments);
@@ -278,7 +278,7 @@ export const listAssignments = async (req: Request, res: Response) => {
       assignments,
       courses,
     };
-    appCache.set(cacheKey, payload, envConfiguration.cacheTtlMs);
+    await writeListCache(cacheKey, payload, envConfiguration.cacheTtlMs);
 
     return res.status(200).json(payload);
   } catch (error) {
@@ -302,7 +302,7 @@ export const listCourses = async (req: Request, res: Response) => {
       className,
       year,
     })}`;
-    const cachedCourses = appCache.get<{ courses: unknown[] }>(cacheKey);
+    const cachedCourses = await readListCache<{ courses: unknown[] }>(cacheKey);
 
     if (cachedCourses) {
       return res.status(200).json(cachedCourses);
@@ -319,7 +319,7 @@ export const listCourses = async (req: Request, res: Response) => {
     const courses = await Course.find(query).sort({ createdAt: -1 });
 
     const payload = { courses };
-    appCache.set(cacheKey, payload, envConfiguration.cacheTtlMs);
+    await writeListCache(cacheKey, payload, envConfiguration.cacheTtlMs);
 
     return res.status(200).json(payload);
   } catch (error) {

@@ -6,7 +6,7 @@ import {
   toTrimmedString,
 } from '../middleware/validation.middleware.js';
 import envConfiguration from '../config/env.js';
-import { appCache, buildTeacherCachePrefix, invalidateTeacherDomains } from '../utils/cache.js';
+import { buildTeacherCachePrefix, invalidateTeacherDomains, readListCache, writeListCache } from '../utils/cache.js';
 
 export const registerStudent = async (req: Request, res: Response) => {
   try {
@@ -87,7 +87,7 @@ export const listStudents = async (req: Request, res: Response) => {
       year,
       studentCode,
     })}`;
-    const cachedStudents = appCache.get<{ students: unknown[] }>(cacheKey);
+    const cachedStudents = await readListCache<{ students: unknown[] }>(cacheKey);
 
     if (cachedStudents) {
       return res.status(200).json(cachedStudents);
@@ -105,7 +105,7 @@ export const listStudents = async (req: Request, res: Response) => {
     const students = await Student.find(query).sort({ createdAt: -1 });
 
     const payload = { students };
-    appCache.set(cacheKey, payload, envConfiguration.cacheTtlMs);
+    await writeListCache(cacheKey, payload, envConfiguration.cacheTtlMs);
 
     return res.status(200).json(payload);
   } catch (error) {

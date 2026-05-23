@@ -3,12 +3,18 @@ import Reports from '../models/reports.model.js';
 import envConfiguration from '../config/env.js';
 import { ensureObjectId, ensureStringArray, toTrimmedString } from '../middleware/validation.middleware.js';
 import { generateStudentReport } from '../services/report.service.js';
-import { appCache, buildTeacherCachePrefix, invalidateTeacherDomains } from '../utils/cache.js';
+import {
+  buildTeacherCachePrefix,
+  deleteCachedByPrefix,
+  invalidateTeacherDomains,
+  readListCache,
+  writeListCache,
+} from '../utils/cache.js';
 import { sendParentReportEmail } from '../utils/report.email.js';
 import { writeAuditLog } from '../services/audit.service.js';
 
-const invalidateReportCache = (teacherId: string) => {
-  appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
+const invalidateReportCache = async (teacherId: string) => {
+  await deleteCachedByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
 };
 
 export const generateReport = async (req: Request, res: Response) => {
@@ -52,7 +58,7 @@ export const generateReport = async (req: Request, res: Response) => {
       ...(weaknesses.length ? { weaknesses } : {}),
     });
 
-    invalidateReportCache(teacherId);
+    await invalidateReportCache(teacherId);
     await invalidateTeacherDomains(teacherId, ['analytics-dashboard', 'analytics-dataset']);
     await writeAuditLog({
       req,
@@ -300,7 +306,7 @@ export const listReports = async (req: Request, res: Response) => {
       studentId,
       reportType,
     })}`;
-    const cached = appCache.get<{ reports: unknown[] }>(cacheKey);
+    const cached = await readListCache<{ reports: unknown[] }>(cacheKey);
     if (cached) {
       return res.status(200).json(cached);
     }
@@ -320,7 +326,7 @@ export const listReports = async (req: Request, res: Response) => {
       .sort({ updatedAt: -1 });
 
     const payload = { reports };
-    appCache.set(cacheKey, payload, envConfiguration.cacheTtlMs);
+    await writeListCache(cacheKey, payload, envConfiguration.cacheTtlMs);
     return res.status(200).json(payload);
   } catch (error) {
     return res.status(500).json({

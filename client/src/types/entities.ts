@@ -12,7 +12,7 @@ export interface Student {
   parentEmail?: string;
   parentPhone?: string;
   dateOfBirth?: Date;
-  gender?: 'M' | 'F' | 'Other';
+  gender?: 'Male' | 'Female' | 'Other';
   enrollmentDate?: Date;
   status?: 'active' | 'inactive' | 'graduated';
   createdAt: Date;
@@ -35,7 +35,7 @@ export interface StudentCreateRequest {
   parentEmail?: string;
   parentPhone?: string;
   dateOfBirth?: Date;
-  gender?: 'M' | 'F' | 'Other';
+  gender?: 'Male' | 'Female' | 'Other';
 }
 
 /**

@@ -6,7 +6,6 @@ import { sendOtpEmail } from '../utils/otp.email.js';
 import { getEmailTransportDebugInfo } from '../utils/email.js';
 import { isNonEmptyString, isValidEmail, toTrimmedString } from '../middleware/validation.middleware.js';
 import { deleteOtp, readOtp, storeOtp } from '../utils/otp.store.js';
-import { error } from 'console';
 
 export const generateOtp = (): string => {
   return crypto.randomInt(100000, 999999).toString();
@@ -41,17 +40,13 @@ export const requestSignupOtp = async (req: Request, res: Response) => {
     });
 
     const mailResult = await sendOtpEmail(email, otp);
-    // if (!mailResult.delivered) {
-    //   await deleteOtp({ email, purpose: 'teacher-signup' });
-    //   console.error('OTP email delivery unavailable.', getEmailTransportDebugInfo());
-    //   return res.status(503).json({
-    //     message: 'Unable to send verification code right now. Please try again later.',
-    //   });
-    // }
 
-    if (!mailResult) {
-      console.error('SMTP email not sent, something went wrong')
-      return res.status(503).json({ msg: "Unable to send verification email now. Please try again" })
+    if (!mailResult.delivered) {
+      await deleteOtp({ email, purpose: 'teacher-signup' });
+      console.error('OTP email delivery failed.', getEmailTransportDebugInfo());
+      return res.status(503).json({
+        message: 'Unable to send verification code right now. Please try again later.',
+      });
     }
 
     return res.status(200).json({
@@ -82,8 +77,13 @@ export const verifyOtpCode = async (req: Request, res: Response) => {
     }
 
     const storedOtp = await readOtp({ email, purpose: 'teacher-signup' });
-    if (!storedOtp) return res.status(400).json({ msg: "No otp provided" })
-    if (storedOtp !== otp) return res.status(400).json({ msg: "Invalid or expired OTP" })
+    if (!storedOtp) {
+      return res.status(400).json({ message: 'No verification code found. Request a new OTP.' });
+    }
+
+    if (storedOtp !== otp) {
+      return res.status(400).json({ message: 'Invalid or expired OTP.' });
+    }
 
     return res.status(200).json({
       message: 'OTP verified successfully.',

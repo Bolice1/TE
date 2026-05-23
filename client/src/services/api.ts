@@ -88,7 +88,10 @@ async function request<T>(
     let errorMsg = "Something went wrong";
     try {
       const errBody = await response.json();
-      errorMsg = errBody.message || errorMsg;
+      errorMsg =
+        (typeof errBody.message === "string" && errBody.message) ||
+        (typeof errBody.msg === "string" && errBody.msg) ||
+        errorMsg;
     } catch {
       // Ignore body parsing failure
     }

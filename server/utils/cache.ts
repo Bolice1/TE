@@ -135,3 +135,9 @@ export const getOrSetCachedValue = async <T>(
   await setCachedJson(key, loadedValue, ttlMs);
   return loadedValue;
 };
+
+/** Read-through list cache (memory + Redis when available). */
+export const readListCache = getCachedJson;
+
+/** Write list cache (memory + Redis when available). */
+export const writeListCache = setCachedJson;

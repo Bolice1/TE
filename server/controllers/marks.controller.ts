@@ -5,7 +5,7 @@ import Marks from '../models/marks.model.js';
 import Student from '../models/student.model.js';
 import envConfiguration from '../config/env.js';
 import { ensureNumber, ensureObjectId, toTrimmedString } from '../middleware/validation.middleware.js';
-import { appCache, buildTeacherCachePrefix, invalidateTeacherDomains } from '../utils/cache.js';
+import { buildTeacherCachePrefix, invalidateTeacherDomains, readListCache, writeListCache } from '../utils/cache.js';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -190,7 +190,7 @@ export const listMarks = async (req: Request, res: Response) => {
       studentId,
       courseId,
     })}`;
-    const cachedMarks = appCache.get<{ marks: unknown[] }>(cacheKey);
+    const cachedMarks = await readListCache<{ marks: unknown[] }>(cacheKey);
 
     if (cachedMarks) {
       return res.status(200).json(cachedMarks);
@@ -222,7 +222,7 @@ export const listMarks = async (req: Request, res: Response) => {
     const payload = {
       marks: filteredMarks,
     };
-    appCache.set(cacheKey, payload, envConfiguration.cacheTtlMs);
+    await writeListCache(cacheKey, payload, envConfiguration.cacheTtlMs);
 
     return res.status(200).json(payload);
   } catch (error) {

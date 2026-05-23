@@ -38,6 +38,7 @@ export const envConfiguration = {
   tokenExpiresIn: readEnv('TOKEN_EXPIRES_IN', 'tokenExpiresIn', 'token-expires_in') || '1d',
   otpExpiresAtMs: readNumber(300000, 'OTP_EXPIRES_AT', 'expires_at'),
   cacheTtlMs: readNumber(30000, 'CACHE_TTL_MS', 'cache_ttl_ms'),
+  corsOrigin: readEnv('CORS_ORIGIN', 'cors_origin') || '*',
 };
 
 if (!envConfiguration.jwtToken || !envConfiguration.db) {

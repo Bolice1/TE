@@ -62,5 +62,7 @@ const coachSchema = new mongoose.Schema<ICoach>(
   },
 );
 
+coachSchema.index({ email: 1, isDeleted: 1 });
+
 const Coach = mongoose.model<ICoach>('Coach', coachSchema);
 export default Coach;

@@ -14,7 +14,12 @@ const normalizeApiBaseUrl = (value?: string): string => {
     return trimmed.replace(/\/+$/, "") || "/api";
   }
 
-  return "/api";
+  try {
+    const url = new URL(trimmed);
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return "/api";
+  }
 };
 
 export const env = {

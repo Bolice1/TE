@@ -1,5 +1,29 @@
+import dns from 'dns';
 import nodemailer from 'nodemailer';
 import envConfiguration from '../config/env.js';
+
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
+const SMTP_TIMEOUT_MS = 15_000;
+const SMTP_RETRY_DELAY_MS = 750;
+
+const ipv4Lookup = (
+  hostname: string,
+  options: dns.LookupOptions,
+  callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void,
+) => {
+  dns.lookup(hostname, { ...options, family: 4, all: false }, callback);
+};
+
+const baseSmtpOptions = () => ({
+  family: 4,
+  lookup: ipv4Lookup,
+  connectionTimeout: SMTP_TIMEOUT_MS,
+  greetingTimeout: SMTP_TIMEOUT_MS,
+  socketTimeout: SMTP_TIMEOUT_MS,
+});
 
 const normalizeService = (value: string) => {
   const normalized = value.trim().toLowerCase();
@@ -18,6 +42,18 @@ const normalizeService = (value: string) => {
 const looksLikeHostname = (value: string) =>
   /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(value.trim());
 
+const gmailSmtpHost = () => ({
+  host: envConfiguration.emailHost || 'smtp.gmail.com',
+  port: envConfiguration.emailPort || 587,
+  secure: envConfiguration.emailSecure,
+  requireTLS: !envConfiguration.emailSecure,
+  ...baseSmtpOptions(),
+  auth: {
+    user: envConfiguration.emailUser,
+    pass: envConfiguration.emailPass,
+  },
+});
+
 const buildTransportOptions = () => {
   if (!envConfiguration.emailUser || !envConfiguration.emailPass) {
     return null;
@@ -28,12 +64,8 @@ const buildTransportOptions = () => {
       host: envConfiguration.emailHost,
       port: envConfiguration.emailPort,
       secure: envConfiguration.emailSecure,
-
-      family: 4,
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-
+      requireTLS: !envConfiguration.emailSecure,
+      ...baseSmtpOptions(),
       auth: {
         user: envConfiguration.emailUser,
         pass: envConfiguration.emailPass,
@@ -41,21 +73,16 @@ const buildTransportOptions = () => {
     };
   }
 
-  const normalizedService = normalizeService(
-    envConfiguration.emailService
-  );
+  const normalizedService = normalizeService(envConfiguration.emailService);
+
+  if (normalizedService === 'gmail') {
+    return gmailSmtpHost();
+  }
 
   if (normalizedService) {
     return {
       service: normalizedService,
-
-      // FIX: Force IPv4
-      family: 4,
-
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-
+      ...baseSmtpOptions(),
       auth: {
         user: envConfiguration.emailUser,
         pass: envConfiguration.emailPass,
@@ -68,14 +95,8 @@ const buildTransportOptions = () => {
       host: envConfiguration.emailService.trim(),
       port: envConfiguration.emailPort,
       secure: envConfiguration.emailSecure,
-
-      // FIX: Force IPv4
-      family: 4,
-
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-
+      requireTLS: !envConfiguration.emailSecure,
+      ...baseSmtpOptions(),
       auth: {
         user: envConfiguration.emailUser,
         pass: envConfiguration.emailPass,
@@ -92,8 +113,46 @@ const transporter = transportOptions
   ? nodemailer.createTransport(transportOptions)
   : null;
 
-export const isEmailTransportConfigured = () =>
-  Boolean(transporter);
+const isRetryableSmtpError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const code = 'code' in error ? String((error as NodeJS.ErrnoException).code ?? '') : '';
+  const message = error.message.toLowerCase();
+
+  return (
+    code === 'ENETUNREACH' ||
+    code === 'ETIMEDOUT' ||
+    code === 'ECONNRESET' ||
+    code === 'ESOCKET' ||
+    code === 'ETIMEOUT' ||
+    message.includes('timeout') ||
+    message.includes('connection')
+  );
+};
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const sanitizeEmailError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return 'Email delivery failed.';
+  }
+
+  const code = 'code' in error ? String((error as NodeJS.ErrnoException).code ?? '') : '';
+
+  if (code === 'EAUTH') {
+    return 'Email authentication failed. Check EMAIL_USER and EMAIL_PASS.';
+  }
+
+  if (code === 'ENETUNREACH' || code === 'ETIMEDOUT' || code === 'ECONNRESET') {
+    return 'Email server is unreachable. Please try again shortly.';
+  }
+
+  return 'Email delivery failed. Please try again later.';
+};
+
+export const isEmailTransportConfigured = () => Boolean(transporter);
 
 export const getEmailTransportDebugInfo = () => ({
   configured: Boolean(transporter),
@@ -104,7 +163,7 @@ export const getEmailTransportDebugInfo = () => ({
   emailPort: envConfiguration.emailPort,
   emailSecure: envConfiguration.emailSecure,
   mode: transportOptions
-    ? 'service' in transportOptions
+    ? 'service' in transportOptions && transportOptions.service
       ? 'service'
       : 'host'
     : 'disabled',
@@ -127,24 +186,36 @@ export const deliverEmail = async (options: {
     };
   }
 
-  try {
-    await transporter.sendMail({
+  const sendOnce = () =>
+    transporter.sendMail({
       from: envConfiguration.emailUser,
       ...options,
     });
 
-    return {
-      delivered: true,
-    };
-  } catch (error) {
-    console.error('Failed to send email:', error);
+  try {
+    await sendOnce();
+    return { delivered: true };
+  } catch (firstError) {
+    if (!isRetryableSmtpError(firstError)) {
+      console.error('Failed to send email:', firstError instanceof Error ? firstError.message : firstError);
+      return {
+        delivered: false,
+        error: sanitizeEmailError(firstError),
+      };
+    }
 
-    return {
-      delivered: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'Unknown email delivery error.',
-    };
+    console.warn('SMTP send failed, retrying once:', firstError instanceof Error ? firstError.message : firstError);
+    await sleep(SMTP_RETRY_DELAY_MS);
+
+    try {
+      await sendOnce();
+      return { delivered: true };
+    } catch (retryError) {
+      console.error('Failed to send email after retry:', retryError instanceof Error ? retryError.message : retryError);
+      return {
+        delivered: false,
+        error: sanitizeEmailError(retryError),
+      };
+    }
   }
 };

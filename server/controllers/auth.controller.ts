@@ -10,7 +10,7 @@ import {
   isValidEmail,
   toTrimmedString,
 } from '../middleware/validation.middleware.js';
-import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
+import { buildTeacherCachePrefix, deleteCachedByPrefix } from '../utils/cache.js';
 import { writeAuditLog } from '../services/audit.service.js';
 import { createTeacherSession, revokeTeacherSession } from '../utils/session.js';
 import { sendTeacherWelcomeEmail } from '../utils/welcome.email.js';
@@ -310,7 +310,7 @@ export const deleteProfile = async (req: Request, res: Response) => {
       { $set: { revokedAt: new Date() } },
     );
 
-    appCache.deleteByPrefix(buildTeacherCachePrefix(teacherId, ''));
+    await deleteCachedByPrefix(buildTeacherCachePrefix(teacherId, ''));
     await writeAuditLog({
       req,
       teacherId,

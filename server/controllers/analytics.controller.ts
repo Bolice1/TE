@@ -12,7 +12,7 @@ import {
 import { ensureObjectId, ensurePositiveInteger, toTrimmedString } from '../middleware/validation.middleware.js';
 import { sendSuccess } from '../utils/api.js';
 import envConfiguration from '../config/env.js';
-import { appCache, buildTeacherCachePrefix } from '../utils/cache.js';
+import { buildTeacherCachePrefix, readListCache, writeListCache } from '../utils/cache.js';
 
 const getFilters = (req: Request) => {
   const term = toTrimmedString(req.query.term)?.toUpperCase();
@@ -38,13 +38,13 @@ export const getAnalyticsDashboard = async (req: Request, res: Response) => {
     page,
     limit,
   })}`;
-  const cached = appCache.get<unknown>(cacheKey);
+  const cached = await readListCache<unknown>(cacheKey);
   if (cached) {
     return sendSuccess(res, 200, cached);
   }
 
   const data = await getDashboardAnalytics(filters, { page, limit });
-  appCache.set(cacheKey, data, envConfiguration.cacheTtlMs);
+  await writeListCache(cacheKey, data, envConfiguration.cacheTtlMs);
   return sendSuccess(res, 200, data);
 };
 
