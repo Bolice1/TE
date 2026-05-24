@@ -107,13 +107,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center border-t border-border pt-6 text-xs text-muted-text">
-            Don't have a teacher workspace yet?{" "}
-            <Link
-              href="/auth/signup"
-              className="text-primary hover:underline font-semibold"
-            >
-              Create accounts here
-            </Link>
+            Contact your administrator to create teacher accounts.
           </div>
         </div>
       </div>
