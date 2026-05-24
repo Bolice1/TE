@@ -2,7 +2,10 @@ import { deliverEmail } from './email.js';
 import envConfiguration from '../config/env.js';
 
 export const buildCoachOnboardingHtml = (email: string, tempPassword: string) => {
-  const loginUrl = envConfiguration.frontendUrl ? `${envConfiguration.frontendUrl}/auth/login` : '/auth/login';
+  // Prefer explicit frontend URL, then CORS_ORIGIN, then localhost fallback
+  const base = envConfiguration.frontendUrl || envConfiguration.corsOrigin || 'http://localhost:3000';
+  const trimmed = base.replace(/\/+$/, '');
+  const loginUrl = `${trimmed}/auth/login`;
   return `
   <div style="font-family: Arial, sans-serif; color: #111;">
     <h2>Welcome to Teacher Emmy</h2>

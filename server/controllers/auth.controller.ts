@@ -54,7 +54,7 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
-    const session = await createTeacherSession(req, coach.id);
+    const session = await createTeacherSession(req, coach.id, coach.role);
     await writeAuditLog({
       req,
       teacherId: coach.id,
