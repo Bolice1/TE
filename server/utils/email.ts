@@ -113,6 +113,14 @@ const transporter = transportOptions
   ? nodemailer.createTransport(transportOptions)
   : null;
 
+if (transporter) {
+  console.log('Email transporter configured:', {
+    mode: transportOptions && 'service' in transportOptions ? 'service' : 'host',
+    host: transportOptions && 'host' in transportOptions ? transportOptions.host : 'service-based',
+    port: transportOptions && 'port' in transportOptions ? transportOptions.port : 'default',
+  });
+}
+
 const isRetryableSmtpError = (error: unknown) => {
   if (!(error instanceof Error)) {
     return false;
@@ -140,6 +148,7 @@ const sanitizeEmailError = (error: unknown) => {
   }
 
   const code = 'code' in error ? String((error as NodeJS.ErrnoException).code ?? '') : '';
+  const message = error.message.toLowerCase();
 
   if (code === 'EAUTH') {
     return 'Email authentication failed. Check EMAIL_USER and EMAIL_PASS.';
@@ -147,6 +156,14 @@ const sanitizeEmailError = (error: unknown) => {
 
   if (code === 'ENETUNREACH' || code === 'ETIMEDOUT' || code === 'ECONNRESET') {
     return 'Email server is unreachable. Please try again shortly.';
+  }
+
+  if (message.includes('timeout') || message.includes('connect')) {
+    return 'Email service connection timed out. SMTP server may be unreachable or overloaded.';
+  }
+
+  if (code === 'ENOTFOUND') {
+    return 'Email server hostname not found. Check EMAIL_SERVICE or EMAIL_HOST configuration.';
   }
 
   return 'Email delivery failed. Please try again later.';

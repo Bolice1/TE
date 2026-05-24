@@ -9,13 +9,16 @@ export const sendOtpEmail = async (email: string, otp: string) => {
   });
 
   if (!mailResult.delivered) {
-    console.warn(`OTP email delivery failed for ${email}. ${mailResult.error ?? 'Unknown delivery error.'}`);
+    const errorMsg = `OTP email delivery failed for ${email}`;
+    const details = mailResult.error ?? 'Unknown delivery error';
+    console.error(errorMsg, details);
     return {
       delivered: false,
       error: mailResult.error,
     };
   }
 
+  console.log(`OTP email successfully sent to ${email}`);
   return {
     delivered: true,
   };
