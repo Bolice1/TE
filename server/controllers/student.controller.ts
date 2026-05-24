@@ -7,12 +7,13 @@ import {
 } from '../middleware/validation.middleware.js';
 import envConfiguration from '../config/env.js';
 import { buildTeacherCachePrefix, invalidateTeacherDomains, readListCache, writeListCache } from '../utils/cache.js';
+import { USER_MESSAGES } from '../utils/user-messages.js';
 
 export const registerStudent = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const name = toTrimmedString(req.body.name);
@@ -26,21 +27,21 @@ export const registerStudent = async (req: Request, res: Response) => {
 
     if (!name || !studentCode || !className || !year || !parentName) {
       return res.status(400).json({
-        message: 'Name, student code, class, year, and parent name are required.',
+        message: USER_MESSAGES.VALIDATION.MISSING_FIELDS,
       });
     }
 
     if (req.body.dateOfBirth && !dateOfBirth) {
-      return res.status(400).json({ message: 'Date of birth must be a valid date.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_DATE });
     }
 
     if (parentEmail && !isValidEmail(parentEmail)) {
-      return res.status(400).json({ message: 'Parent email must be a valid email address.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_PARENT_EMAIL });
     }
 
     const existingStudent = await Student.findOne({ studentCode, isDeleted: false });
     if (existingStudent) {
-      return res.status(409).json({ message: 'Student code already exists.' });
+      return res.status(409).json({ message: USER_MESSAGES.VALIDATION.DUPLICATE_STUDENT_CODE });
     }
 
     const payload: Record<string, unknown> = {
@@ -61,13 +62,13 @@ export const registerStudent = async (req: Request, res: Response) => {
     await invalidateTeacherDomains(teacherId, ['students', 'reports', 'marks', 'analytics-dashboard', 'analytics-dataset']);
 
     return res.status(201).json({
-      message: 'Student registered successfully.',
+      message: 'Student has been registered successfully.',
       student,
     });
   } catch (error) {
+    console.error('Student registration error:', error);
     return res.status(500).json({
-      message: 'Failed to register student.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.STUDENT.REGISTER_FAILED,
     });
   }
 };
@@ -76,7 +77,7 @@ export const listStudents = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const className = toTrimmedString(req.query.className);
@@ -109,9 +110,9 @@ export const listStudents = async (req: Request, res: Response) => {
 
     return res.status(200).json(payload);
   } catch (error) {
+    console.error('List students error:', error);
     return res.status(500).json({
-      message: 'Failed to fetch students.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.STUDENT.FETCH_FAILED,
     });
   }
 };

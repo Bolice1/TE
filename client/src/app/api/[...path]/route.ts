@@ -58,20 +58,11 @@ const proxyRequest = async (
       headers: responseHeaders,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    const isTimeout = message.toLowerCase().includes("timeout") || message.includes("aborted");
-    const isRefused = message.includes("ECONNREFUSED");
-
+    console.error("Backend proxy error:", error instanceof Error ? error.message : String(error));
+    
     return NextResponse.json(
       {
-        message: "Unable to reach the backend service.",
-        hint: isRefused
-          ? "Start Express locally (port 4000) or set BACKEND_API_URL to your deployed API URL."
-          : isTimeout
-            ? "The API may be waking up (Render cold start). Retry in a few seconds."
-            : "Verify BACKEND_API_URL is correct and the API service is running.",
-        backendApiUrl,
-        error: message,
+        message: "Something went wrong. Please try again.",
       },
       { status: 502 }
     );

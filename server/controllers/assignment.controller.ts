@@ -11,12 +11,13 @@ import {
 } from '../middleware/validation.middleware.js';
 import { buildTeacherCachePrefix, invalidateTeacherDomains, readListCache, writeListCache } from '../utils/cache.js';
 import { getCurrentAcademicYear, isHistoricalAcademicYear } from '../utils/academic-year.js';
+import { USER_MESSAGES } from '../utils/user-messages.js';
 
 export const createAssignment = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const courseId = ensureObjectId(req.body.courseId);
@@ -35,36 +36,36 @@ export const createAssignment = async (req: Request, res: Response) => {
 
     if (!courseId || !title || !className || !year || maxScore === null) {
       return res.status(400).json({
-        message: 'Course, title, class, year, and max score are required.',
+        message: USER_MESSAGES.VALIDATION.MISSING_FIELDS,
       });
     }
 
     if (type !== 'assignment' && type !== 'quiz') {
-      return res.status(400).json({ message: 'Type must be either assignment or quiz.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_REQUEST });
     }
 
     if (!assignmentDate) {
-      return res.status(400).json({ message: 'Assignment date must be a valid date.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_DATE });
     }
 
     if (req.body.dueDate && !dueDate) {
-      return res.status(400).json({ message: 'Due date must be a valid date.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_DATE });
     }
 
     if (req.body.startTime && !startTime) {
-      return res.status(400).json({ message: 'Start time must be a valid date.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_DATE });
     }
 
     if (req.body.endTime && !endTime) {
-      return res.status(400).json({ message: 'End time must be a valid date.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_DATE });
     }
 
     if (maxScore <= 0) {
-      return res.status(400).json({ message: 'Max score must be greater than zero.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_SCORE });
     }
 
     if (weight <= 0) {
-      return res.status(400).json({ message: 'Weight must be greater than zero.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_REQUEST });
     }
 
     const course = await Course.findOne({
@@ -74,30 +75,30 @@ export const createAssignment = async (req: Request, res: Response) => {
     });
 
     if (!course) {
-      return res.status(404).json({ message: 'Course not found for this teacher.' });
+      return res.status(404).json({ message: USER_MESSAGES.GENERAL.NOT_FOUND });
     }
 
     if (isHistoricalAcademicYear(course.year) || isHistoricalAcademicYear(year)) {
       return res.status(400).json({
-        message: 'Historical academic years are read-only. Create assessments in the current academic year.',
+        message: USER_MESSAGES.VALIDATION.INVALID_REQUEST,
       });
     }
 
     if (course.className !== className || course.year !== year) {
       return res.status(400).json({
-        message: 'Assignment class and year must match the selected course.',
+        message: USER_MESSAGES.VALIDATION.INVALID_REQUEST,
       });
     }
 
     if (dueDate && dueDate < assignmentDate) {
       return res.status(400).json({
-        message: 'Due date cannot be earlier than the assignment date.',
+        message: USER_MESSAGES.VALIDATION.INVALID_REQUEST,
       });
     }
 
     if (startTime && endTime && endTime <= startTime) {
       return res.status(400).json({
-        message: 'End time must be later than start time.',
+        message: USER_MESSAGES.VALIDATION.INVALID_REQUEST,
       });
     }
 
@@ -131,19 +132,19 @@ export const createAssignment = async (req: Request, res: Response) => {
     ]);
 
     return res.status(201).json({
-      message: 'Assignment created successfully.',
+      message: 'Assessment has been created successfully.',
       assignment,
     });
   } catch (error) {
     if ((error as { code?: number }).code === 11000) {
       return res.status(409).json({
-        message: 'An assessment with the same details already exists for this course.',
+        message: USER_MESSAGES.GENERAL.RESOURCE_CONFLICT,
       });
     }
 
+    console.error('Assignment creation error:', error);
     return res.status(500).json({
-      message: 'Failed to create assignment.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.ASSIGNMENT.CREATE_FAILED,
     });
   }
 };
@@ -152,7 +153,7 @@ export const createCourse = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const name = toTrimmedString(req.body.name);
@@ -165,17 +166,17 @@ export const createCourse = async (req: Request, res: Response) => {
 
     if (!name || !className || !year || !outcome || numberOfPeriodsInAWeek === null) {
       return res.status(400).json({
-        message: 'Name, class, year, periods per week, and outcome are required.',
+        message: USER_MESSAGES.VALIDATION.MISSING_FIELDS,
       });
     }
 
     if (numberOfPeriodsInAWeek <= 0) {
-      return res.status(400).json({ message: 'Periods per week must be greater than zero.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_REQUEST });
     }
 
     if (isHistoricalAcademicYear(year)) {
       return res.status(400).json({
-        message: `Courses cannot be created for past academic years. Create the course in ${getCurrentAcademicYear()} or later.`,
+        message: USER_MESSAGES.VALIDATION.INVALID_REQUEST,
       });
     }
 
@@ -200,19 +201,19 @@ export const createCourse = async (req: Request, res: Response) => {
     ]);
 
     return res.status(201).json({
-      message: 'Course created successfully.',
+      message: 'Course has been created successfully.',
       course,
     });
   } catch (error) {
     if ((error as { code?: number }).code === 11000) {
       return res.status(409).json({
-        message: 'A course with the same name or code already exists for this class and year.',
+        message: USER_MESSAGES.GENERAL.RESOURCE_CONFLICT,
       });
     }
 
+    console.error('Course creation error:', error);
     return res.status(500).json({
-      message: 'Failed to create course.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.GENERAL.SERVER_ERROR,
     });
   }
 };
@@ -221,7 +222,7 @@ export const listAssignments = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const className = toTrimmedString(req.query.className);
@@ -282,9 +283,9 @@ export const listAssignments = async (req: Request, res: Response) => {
 
     return res.status(200).json(payload);
   } catch (error) {
+    console.error('List assignments error:', error);
     return res.status(500).json({
-      message: 'Failed to fetch assignments.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.ASSIGNMENT.FETCH_FAILED,
     });
   }
 };
@@ -293,7 +294,7 @@ export const listCourses = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const className = toTrimmedString(req.query.className);
@@ -323,9 +324,9 @@ export const listCourses = async (req: Request, res: Response) => {
 
     return res.status(200).json(payload);
   } catch (error) {
+    console.error('List courses error:', error);
     return res.status(500).json({
-      message: 'Failed to fetch courses.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.GENERAL.SERVER_ERROR,
     });
   }
 };

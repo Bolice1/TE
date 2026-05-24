@@ -7,6 +7,7 @@ import assignmentRoutes from './routes/assignment.routes.js';
 import marksRoutes from './routes/marks.routes.js';
 import reportRoutes from './routes/reports.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
+import teacherRoutes from './routes/teacher.routes.js';
 import { corsMiddleware } from './middleware/cors.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
 
@@ -42,6 +43,7 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/marks', marksRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/teacher', teacherRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({

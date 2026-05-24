@@ -83,14 +83,13 @@ async function request<T>(
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Network error";
     throw new ApiError(
-      `Unable to reach the backend (${detail}). ` +
-        "Ensure the app uses /api and BACKEND_API_URL is set — open /api/status to diagnose.",
+      "Unable to connect to the application. Please check your internet connection and try again.",
       0
     );
   }
 
   if (!response.ok) {
-    let errorMsg = "Something went wrong";
+    let errorMsg = "Something went wrong. Please try again.";
     try {
       const errBody = await response.json();
       const hint = typeof errBody.hint === "string" ? errBody.hint : "";
@@ -102,7 +101,7 @@ async function request<T>(
         errorMsg = `${errorMsg} ${hint}`.trim();
       }
     } catch {
-      // Ignore body parsing failure
+      // Ignore body parsing failure, use default error message
     }
     throw new ApiError(errorMsg, response.status);
   }
@@ -375,5 +374,11 @@ export const api = {
           courseId: filters.courseId,
         })}`
       ),
+  },
+  teacher: {
+    getClasses: () =>
+      request<string[]>("/teacher/classes"),
+    getYears: () =>
+      request<string[]>("/teacher/years"),
   },
 };

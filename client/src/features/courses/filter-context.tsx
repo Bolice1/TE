@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { getCurrentAcademicYear } from "@/utils/academic-year";
+import { api } from "@/services/api";
 
 export interface FilterContextType {
   academicYear: string;
@@ -14,6 +15,7 @@ export interface FilterContextType {
   setCourseId: (course: string) => void;
   availableClasses: string[];
   setAvailableClasses: (classes: string[]) => void;
+  isLoadingClasses: boolean;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -24,7 +26,26 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   const [term, setTerm] = useState<string>("TERM 1");
   const [className, setClassName] = useState<string>("");
   const [courseId, setCourseId] = useState<string>("");
-  const [availableClasses, setAvailableClasses] = useState<string[]>(["S1", "S2", "S3", "P4", "P5", "P6"]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [isLoadingClasses, setIsLoadingClasses] = useState(true);
+
+  // Fetch teacher's classes on mount
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        setIsLoadingClasses(true);
+        const classes = await api.teacher.getClasses();
+        setAvailableClasses(classes || []);
+      } catch (error) {
+        console.error("Error loading teacher classes:", error);
+        setAvailableClasses([]);
+      } finally {
+        setIsLoadingClasses(false);
+      }
+    };
+
+    loadClasses();
+  }, []);
 
   // Attempt to restore from localStorage on mount
   useEffect(() => {
@@ -78,6 +99,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         setCourseId: handleSetCourseId,
         availableClasses,
         setAvailableClasses,
+        isLoadingClasses,
       }}
     >
       {children}

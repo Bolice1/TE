@@ -16,24 +16,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "./chart-container";
 import { SectionHeading } from "./section-heading";
 
-const classPerformance = [
-  { className: "S1", average: 76 },
-  { className: "S2", average: 81 },
-  { className: "S3", average: 73 },
-  { className: "P5", average: 88 },
+// Example data for demonstration - will be replaced with actual teacher data in dashboard
+const exampleClassPerformance = [
+  { className: "Class A", average: 76 },
+  { className: "Class B", average: 81 },
+  { className: "Class C", average: 73 },
+  { className: "Class D", average: 88 },
 ];
 
-const competencyTrend = [
+const exampleCompetencyTrend = [
   { week: "W1", mastery: 62 },
   { week: "W2", mastery: 68 },
   { week: "W3", mastery: 74 },
   { week: "W4", mastery: 79 },
 ];
 
-const classCards = [
-  { name: "S2 Mathematics", average: 84, band: "Proficient", students: 32 },
-  { name: "P5 Literacy", average: 79, band: "Developing", students: 28 },
-  { name: "S1 Science", average: 71, band: "Emerging", students: 30 },
+const exampleClassCards = [
+  { name: "Class B - Subject A", average: 84, band: "Proficient", students: 32 },
+  { name: "Class D - Subject B", average: 79, band: "Developing", students: 28 },
+  { name: "Class A - Subject C", average: 71, band: "Emerging", students: 30 },
 ];
 
 export function AnalyticsShowcase() {
@@ -61,7 +62,7 @@ export function AnalyticsShowcase() {
               <CardContent className="h-64 pt-0">
                 <ChartContainer className="h-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={classPerformance}>
+                  <BarChart data={exampleClassPerformance}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                     <XAxis dataKey="className" tick={{ fill: "#64748B", fontSize: 12 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: "#64748B", fontSize: 12 }} axisLine={false} tickLine={false} />
@@ -87,7 +88,7 @@ export function AnalyticsShowcase() {
               <CardContent className="h-64 pt-0">
                 <ChartContainer className="h-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={competencyTrend}>
+                  <LineChart data={exampleCompetencyTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                     <XAxis dataKey="week" tick={{ fill: "#64748B", fontSize: 12 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: "#64748B", fontSize: 12 }} axisLine={false} tickLine={false} />
@@ -102,7 +103,7 @@ export function AnalyticsShowcase() {
         </div>
 
         <div className="mt-5 grid gap-5 md:grid-cols-3">
-          {classCards.map((item, index) => (
+          {exampleClassCards.map((item, index) => (
             <motion.div
               key={item.name}
               initial={{ opacity: 0, y: 16 }}

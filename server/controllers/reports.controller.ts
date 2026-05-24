@@ -12,6 +12,7 @@ import {
 } from '../utils/cache.js';
 import { sendParentReportEmail } from '../utils/report.email.js';
 import { writeAuditLog } from '../services/audit.service.js';
+import { USER_MESSAGES } from '../utils/user-messages.js';
 
 const invalidateReportCache = async (teacherId: string) => {
   await deleteCachedByPrefix(buildTeacherCachePrefix(teacherId, 'reports'));
@@ -24,7 +25,7 @@ export const generateReport = async (req: Request, res: Response) => {
     const schoolName = req.user?.coachingName;
 
     if (!teacherId || !teacherName || !schoolName) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const studentId = ensureObjectId(req.params.studentId);
@@ -34,7 +35,7 @@ export const generateReport = async (req: Request, res: Response) => {
 
     if (!studentId || !year || (reportType === 'term' && !term)) {
       return res.status(400).json({
-        message: 'Student id, year, and term are required for term report generation.',
+        message: USER_MESSAGES.VALIDATION.MISSING_FIELDS,
       });
     }
 
@@ -91,7 +92,7 @@ export const generateReport = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({
-      message: 'Report generated successfully.',
+      message: 'Report has been generated successfully.',
       report,
       summary: {
         totalScore: report.totalScore,
@@ -112,6 +113,7 @@ export const generateReport = async (req: Request, res: Response) => {
     const year = toTrimmedString(req.query.year);
     const term = toTrimmedString(req.query.term);
     const entityId = typeof req.params.studentId === 'string' ? req.params.studentId : undefined;
+    console.error('Report generation error:', error);
     await writeAuditLog({
       req,
       ...(req.user?.id ? { teacherId: req.user.id } : {}),
@@ -122,8 +124,7 @@ export const generateReport = async (req: Request, res: Response) => {
       metadata: { year, term },
     }).catch(() => undefined);
     return res.status(500).json({
-      message: 'Failed to generate student report.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.REPORTS.GENERATE_FAILED,
     });
   }
 };
@@ -132,7 +133,7 @@ export const printReport = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const studentId = ensureObjectId(req.params.studentId);
@@ -142,7 +143,7 @@ export const printReport = async (req: Request, res: Response) => {
 
     if (!studentId || !year || (reportType === 'term' && !term)) {
       return res.status(400).json({
-        message: 'Student id, year, and term are required.',
+        message: USER_MESSAGES.VALIDATION.MISSING_FIELDS,
       });
     }
 
@@ -161,16 +162,16 @@ export const printReport = async (req: Request, res: Response) => {
 
     if (!report) {
       return res.status(404).json({
-        message: 'Report not found. Generate the report first.',
+        message: USER_MESSAGES.REPORTS.NOT_FOUND,
       });
     }
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(report.html);
   } catch (error) {
+    console.error('Print report error:', error);
     return res.status(500).json({
-      message: 'Failed to print report.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.REPORTS.PRINT_FAILED,
     });
   }
 };
@@ -181,7 +182,7 @@ export const downloadReport = async (req: Request, res: Response) => {
     const teacherName = req.user?.name;
     const schoolName = req.user?.coachingName;
     if (!teacherId || !teacherName || !schoolName) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const studentId = ensureObjectId(req.params.studentId);
@@ -190,7 +191,7 @@ export const downloadReport = async (req: Request, res: Response) => {
     const term = reportType === 'term' ? toTrimmedString(req.query.term)?.toUpperCase() : undefined;
 
     if (!studentId || !year || (reportType === 'term' && !term)) {
-      return res.status(400).json({ message: 'Student id, year, and term are required.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.MISSING_FIELDS });
     }
 
     const { pdfBuffer } = await generateStudentReport({
@@ -207,9 +208,9 @@ export const downloadReport = async (req: Request, res: Response) => {
     res.setHeader('Content-Disposition', `attachment; filename="report-${studentId}-${year}-${reportType}.pdf"`);
     return res.status(200).send(pdfBuffer);
   } catch (error) {
+    console.error('Download report error:', error);
     return res.status(500).json({
-      message: 'Failed to download report.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.REPORTS.DOWNLOAD_FAILED,
     });
   }
 };
@@ -220,7 +221,7 @@ export const sendReportToParent = async (req: Request, res: Response) => {
     const teacherName = req.user?.name;
     const schoolName = req.user?.coachingName;
     if (!teacherId || !teacherName || !schoolName) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const studentId = ensureObjectId(req.params.studentId);
@@ -229,7 +230,7 @@ export const sendReportToParent = async (req: Request, res: Response) => {
     const term = reportType === 'term' ? toTrimmedString(req.query.term)?.toUpperCase() : undefined;
 
     if (!studentId || !year || (reportType === 'term' && !term)) {
-      return res.status(400).json({ message: 'Student id, year, and term are required.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.MISSING_FIELDS });
     }
 
     const teacherComment = toTrimmedString(req.body.teacherComment);
@@ -266,7 +267,7 @@ export const sendReportToParent = async (req: Request, res: Response) => {
 
     const student = report?.student as unknown as { parentEmail?: string; parentName: string; name: string } | undefined;
     if (!student?.parentEmail) {
-      return res.status(400).json({ message: 'Parent email is not available for this student.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.MISSING_FIELDS });
     }
 
     const emailDelivery = await sendParentReportEmail({
@@ -278,13 +279,13 @@ export const sendReportToParent = async (req: Request, res: Response) => {
     });
 
     return res.status(200).json({
-      message: 'Report sent to parent successfully.',
+      message: 'Report has been sent to the parent successfully.',
       emailDelivery,
     });
   } catch (error) {
+    console.error('Send report error:', error);
     return res.status(500).json({
-      message: 'Failed to send report to parent.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.REPORTS.EMAIL_FAILED,
     });
   }
 };
@@ -293,7 +294,7 @@ export const listReports = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const year = toTrimmedString(req.query.year);
@@ -329,9 +330,9 @@ export const listReports = async (req: Request, res: Response) => {
     await writeListCache(cacheKey, payload, envConfiguration.cacheTtlMs);
     return res.status(200).json(payload);
   } catch (error) {
+    console.error('List reports error:', error);
     return res.status(500).json({
-      message: 'Failed to fetch reports.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.REPORTS.FETCH_FAILED,
     });
   }
 };

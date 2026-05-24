@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import Coach from '../models/coach.model.js';
 import TeacherSession from '../models/session.model.js';
 import envConfiguration from '../config/env.js';
+import { USER_MESSAGES } from '../utils/user-messages.js';
 
 type AuthTokenPayload = {
   userId: string;
@@ -15,7 +16,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const authHeader = req.headers.authorization;
 
     if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Authentication token is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const token = authHeader.slice(7);
@@ -34,7 +35,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     ]);
 
     if (!teacher || !session) {
-      return res.status(401).json({ message: 'Teacher account not found.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_EXPIRED });
     }
 
     req.user = {
@@ -48,9 +49,11 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     next();
   } catch (error) {
+    const isTokenError = error instanceof jwt.TokenExpiredError;
+    const message = isTokenError ? USER_MESSAGES.AUTH.TOKEN_EXPIRED : USER_MESSAGES.AUTH.TOKEN_INVALID;
+    console.error('Authentication error:', error);
     return res.status(401).json({
-      message: 'Invalid or expired authentication token.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message,
     });
   }
 };

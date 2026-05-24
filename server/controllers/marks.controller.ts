@@ -6,12 +6,13 @@ import Student from '../models/student.model.js';
 import envConfiguration from '../config/env.js';
 import { ensureNumber, ensureObjectId, toTrimmedString } from '../middleware/validation.middleware.js';
 import { buildTeacherCachePrefix, invalidateTeacherDomains, readListCache, writeListCache } from '../utils/cache.js';
+import { USER_MESSAGES } from '../utils/user-messages.js';
 
 export const register = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const studentId = ensureObjectId(req.body.studentId);
@@ -24,12 +25,12 @@ export const register = async (req: Request, res: Response) => {
 
     if (!studentId || !courseId || !assignmentId || score === null || !term || !year) {
       return res.status(400).json({
-        message: 'Student, course, assignment, score, term, and year are required.',
+        message: USER_MESSAGES.VALIDATION.MISSING_FIELDS,
       });
     }
 
     if (score < 0) {
-      return res.status(400).json({ message: 'Score cannot be negative.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_SCORE });
     }
 
     const [student, course, assignment] = await Promise.all([
@@ -39,36 +40,36 @@ export const register = async (req: Request, res: Response) => {
     ]);
 
     if (!student) {
-      return res.status(404).json({ message: 'Student not found.' });
+      return res.status(404).json({ message: USER_MESSAGES.STUDENT.NOT_FOUND });
     }
 
     if (!course) {
-      return res.status(404).json({ message: 'Course not found.' });
+      return res.status(404).json({ message: USER_MESSAGES.GENERAL.NOT_FOUND });
     }
 
     if (!assignment) {
-      return res.status(404).json({ message: 'Assignment not found.' });
+      return res.status(404).json({ message: USER_MESSAGES.GENERAL.NOT_FOUND });
     }
 
     if (String(assignment.course) !== courseId) {
-      return res.status(400).json({ message: 'Assignment does not belong to the selected course.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_REQUEST });
     }
 
     if (student.className !== course.className || student.year !== course.year) {
       return res.status(400).json({
-        message: 'Student class and year must match the selected course.',
+        message: USER_MESSAGES.VALIDATION.INVALID_REQUEST,
       });
     }
 
     if (assignment.className !== course.className || assignment.year !== course.year) {
       return res.status(400).json({
-        message: 'Assignment class and year must match the selected course.',
+        message: USER_MESSAGES.VALIDATION.INVALID_REQUEST,
       });
     }
 
     if (score > assignment.maxScore) {
       return res.status(400).json({
-        message: `Score cannot exceed the assignment max score of ${assignment.maxScore}.`,
+        message: USER_MESSAGES.VALIDATION.INVALID_SCORE,
       });
     }
 
@@ -89,19 +90,19 @@ export const register = async (req: Request, res: Response) => {
     await invalidateTeacherDomains(teacherId, ['marks', 'reports', 'analytics-dashboard', 'analytics-dataset']);
 
     return res.status(201).json({
-      message: 'Student mark saved successfully.',
+      message: 'Marks have been saved successfully.',
       mark: registered,
     });
   } catch (error) {
     if ((error as { code?: number }).code === 11000) {
       return res.status(409).json({
-        message: 'A mark for this student and assignment already exists.',
+        message: USER_MESSAGES.GENERAL.RESOURCE_CONFLICT,
       });
     }
 
+    console.error('Mark registration error:', error);
     return res.status(500).json({
-      message: 'Failed to save student mark.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.MARKS.SAVE_FAILED,
     });
   }
 };
@@ -110,7 +111,7 @@ export const update = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const marksId = ensureObjectId(req.params.id);
@@ -118,15 +119,15 @@ export const update = async (req: Request, res: Response) => {
     const comment = toTrimmedString(req.body.comment);
 
     if (!marksId) {
-      return res.status(400).json({ message: 'Valid mark id is required.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.MISSING_FIELDS });
     }
 
     if (score === null && comment === null) {
-      return res.status(400).json({ message: 'Provide a score or comment to update.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.MISSING_FIELDS });
     }
 
     if (score !== null && score < 0) {
-      return res.status(400).json({ message: 'Score cannot be negative.' });
+      return res.status(400).json({ message: USER_MESSAGES.VALIDATION.INVALID_SCORE });
     }
 
     const mark = await Marks.findOne({
@@ -136,14 +137,14 @@ export const update = async (req: Request, res: Response) => {
     }).populate('assignment', 'maxScore');
 
     if (!mark) {
-      return res.status(404).json({ message: 'Mark not found.' });
+      return res.status(404).json({ message: USER_MESSAGES.MARKS.NOT_FOUND });
     }
 
     const assignment = mark.assignment as unknown as { maxScore: number };
 
     if (score !== null && score > assignment.maxScore) {
       return res.status(400).json({
-        message: `Score cannot exceed the assignment max score of ${assignment.maxScore}.`,
+        message: USER_MESSAGES.VALIDATION.INVALID_SCORE,
       });
     }
 
@@ -160,13 +161,13 @@ export const update = async (req: Request, res: Response) => {
     await invalidateTeacherDomains(teacherId, ['marks', 'reports', 'analytics-dashboard', 'analytics-dataset']);
 
     return res.status(200).json({
-      message: 'Marks updated successfully.',
+      message: 'Marks have been updated successfully.',
       mark,
     });
   } catch (error) {
+    console.error('Mark update error:', error);
     return res.status(500).json({
-      message: 'Failed to update mark.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.MARKS.UPDATE_FAILED,
     });
   }
 };
@@ -175,7 +176,7 @@ export const listMarks = async (req: Request, res: Response) => {
   try {
     const teacherId = req.user?.id;
     if (!teacherId) {
-      return res.status(401).json({ message: 'Authentication is required.' });
+      return res.status(401).json({ message: USER_MESSAGES.AUTH.TOKEN_REQUIRED });
     }
 
     const term = toTrimmedString(req.query.term)?.toUpperCase();
@@ -226,9 +227,9 @@ export const listMarks = async (req: Request, res: Response) => {
 
     return res.status(200).json(payload);
   } catch (error) {
+    console.error('List marks error:', error);
     return res.status(500).json({
-      message: 'Failed to fetch marks.',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: USER_MESSAGES.MARKS.FETCH_FAILED,
     });
   }
 };
