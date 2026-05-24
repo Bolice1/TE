@@ -4,10 +4,10 @@ import jwt from 'jsonwebtoken';
 import TeacherSession from '../models/session.model.js';
 import envConfiguration from '../config/env.js';
 
-export const buildToken = (userId: string, sessionId: string) => {
+export const buildToken = (userId: string, sessionId: string, role: 'SUPER_ADMIN' | 'COACH' = 'COACH') => {
   const expiresIn = envConfiguration.tokenExpiresIn as NonNullable<jwt.SignOptions['expiresIn']>;
 
-  const token = jwt.sign({ userId, role: 'teacher', sessionId }, envConfiguration.jwtToken, {
+  const token = jwt.sign({ userId, role, sessionId }, envConfiguration.jwtToken, {
     expiresIn,
   });
 
@@ -24,9 +24,9 @@ export const buildToken = (userId: string, sessionId: string) => {
   };
 };
 
-export const createTeacherSession = async (req: Request, teacherId: string) => {
+export const createTeacherSession = async (req: Request, teacherId: string, role: 'SUPER_ADMIN' | 'COACH' = 'COACH') => {
   const sessionId = crypto.randomUUID();
-  const { token, expiresAt } = buildToken(teacherId, sessionId);
+  const { token, expiresAt } = buildToken(teacherId, sessionId, role);
 
   await TeacherSession.create({
     teacher: teacherId,

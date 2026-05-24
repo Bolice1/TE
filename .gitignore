@@ -1,3 +1,7 @@
 # ide and env
 .agents/
 .codex/
+
+.env
+*.env
+*.env.*

@@ -5,10 +5,11 @@ declare global {
     interface UserPayload {
       id: string;
       email: string;
-      role: 'teacher';
+      role: 'SUPER_ADMIN' | 'COACH';
       name: string;
       coachingName: string;
       sessionId: string;
+      isActive?: boolean;
     }
 
     interface Request {

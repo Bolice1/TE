@@ -212,6 +212,9 @@ export interface Teacher {
   employeeId?: string;
   qualifications?: string[];
   yearsOfExperience?: number;
+  role?: 'SUPER_ADMIN' | 'COACH';
+  isActive?: boolean;
+  mustChangePassword?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -219,7 +222,7 @@ export interface Teacher {
 export interface AuthResponse {
   token: string;
   refreshToken?: string;
-  teacher: Teacher;
+  user: Teacher;
   expiresIn?: number;
 }
 

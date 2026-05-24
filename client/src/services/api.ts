@@ -254,23 +254,8 @@ export interface GlobalFilters {
 
 export const api = {
   auth: {
-    requestOtp: (email: string) =>
-      request<OtpRequestResponse>("/auth/signup/initiate", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      }),
-    verifyOtp: (email: string, otp: string) =>
-      request<OtpVerifyResponse>("/auth/signup/verify", {
-        method: "POST",
-        body: JSON.stringify({ email, otp }),
-      }),
-    signup: (signupToken: string, data: Omit<any, "signupToken">) =>
-      requestWithSignupToken<AuthResponse>("/auth/signup/complete", signupToken, {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
     login: (credentials: any) =>
-      request<AuthResponse>("/auth/login", {
+      request<{ token: string; user: any }>("/auth/login", {
         method: "POST",
         body: JSON.stringify(credentials),
       }),
@@ -278,9 +263,9 @@ export const api = {
       request<{ message: string }>("/auth/logout", {
         method: "POST",
       }),
-    getProfile: () => request<{ teacher: Teacher }>("/auth/me"),
+    getProfile: () => request<{ user: any }>("/auth/me"),
     updateProfile: (data: any) =>
-      request<{ teacher: Teacher }>("/auth/me", {
+      request<{ user: any }>("/auth/me", {
         method: "PATCH",
         body: JSON.stringify(data),
       }),
@@ -288,6 +273,23 @@ export const api = {
       request<{ message: string }>("/auth/me", {
         method: "DELETE",
       }),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<{ message: string }>("/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
+    forgotPassword: (email: string) =>
+      request<{ message: string }>("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (token: string, newPassword: string) =>
+      request<{ message: string }>("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, newPassword }),
+      }),
+    // Signup endpoints removed (admin-only flow)
+
   },
   students: {
     list: (filters: { className?: string; year?: string; studentCode?: string }) =>
@@ -437,5 +439,19 @@ export const api = {
           courseId: filters.courseId,
         })}`
       ),
+  },
+  admin: {
+    getDashboard: () => request<any>('/admin/dashboard'),
+    listCoaches: (page = 1, limit = 20) => request<any>(`/admin/coaches?page=${page}&limit=${limit}`),
+    createCoach: (data: any) => request<any>('/admin/coaches', { method: 'POST', body: JSON.stringify(data) }),
+    getCoach: (id: string) => request<any>(`/admin/coaches/${id}`),
+    deactivateCoach: (id: string) => request<any>(`/admin/coaches/${id}/deactivate`, { method: 'PATCH' }),
+    reactivateCoach: (id: string) => request<any>(`/admin/coaches/${id}/reactivate`, { method: 'PATCH' }),
+    sendNotification: (payload: any) => request<any>('/admin/notifications', { method: 'POST', body: JSON.stringify(payload) }),
+  },
+  notifications: {
+    list: (page = 1, limit = 20) => request<any>(`/notifications?page=${page}&limit=${limit}`),
+    markRead: (id: string) => request<any>(`/notifications/${id}/read`, { method: 'PATCH' }),
+    markAllRead: () => request<any>(`/notifications/read-all`, { method: 'PATCH' }),
   },
 };

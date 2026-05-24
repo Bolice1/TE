@@ -25,9 +25,10 @@ export function useAuth(requireAuth = true) {
     retry: false,
   });
 
-  const teacher = profileData?.teacher;
+  const user = profileData?.user;
   const hasToken = Boolean(token);
-  const isAuthenticated = Boolean(token && teacher);
+  const isAuthenticated = Boolean(token && user);
+  const role = user?.role as string | undefined;
 
   // Handle route protection
   useEffect(() => {
@@ -42,35 +43,29 @@ export function useAuth(requireAuth = true) {
 
     if (requireAuth && hasToken && isError) {
       localStorage.removeItem("te_token");
-      localStorage.removeItem("te_teacher");
+      localStorage.removeItem("te_user");
       queryClient.clear();
       router.replace("/auth/login");
       return;
     }
 
     if (isAuthenticated && isAuthPage) {
-      router.replace("/dashboard");
+      if (role === 'SUPER_ADMIN') router.replace('/admin');
+      else router.replace('/dashboard');
     }
-  }, [hasToken, isAuthenticated, isError, isLoading, pathname, queryClient, requireAuth, router]);
+  }, [hasToken, isAuthenticated, isError, isLoading, pathname, queryClient, requireAuth, router, role]);
 
   const loginMutation = useMutation({
     mutationFn: api.auth.login,
     onSuccess: (data) => {
       localStorage.setItem("te_token", data.token);
-      localStorage.setItem("te_teacher", JSON.stringify(data.teacher));
-      queryClient.setQueryData(queryKeys.auth.profile(), { teacher: data.teacher });
-      router.replace("/dashboard");
-    },
-  });
-
-  const signupMutation = useMutation({
-    mutationFn: (params: { signupToken: string; data: any }) =>
-      api.auth.signup(params.signupToken, params.data),
-    onSuccess: (data) => {
-      localStorage.setItem("te_token", data.token);
-      localStorage.setItem("te_teacher", JSON.stringify(data.teacher));
-      queryClient.setQueryData(queryKeys.auth.profile(), { teacher: data.teacher });
-      router.replace("/dashboard");
+      localStorage.setItem("te_user", JSON.stringify(data.user));
+      queryClient.setQueryData(queryKeys.auth.profile(), { user: data.user });
+      if (data.user?.mustChangePassword) {
+        localStorage.setItem('te_must_change_password', '1');
+      }
+      if (data.user?.role === 'SUPER_ADMIN') router.replace('/admin');
+      else router.replace('/dashboard');
     },
   });
 
@@ -78,23 +73,23 @@ export function useAuth(requireAuth = true) {
     mutationFn: api.auth.logout,
     onSettled: () => {
       localStorage.removeItem("te_token");
-      localStorage.removeItem("te_teacher");
+      localStorage.removeItem("te_user");
+      localStorage.removeItem('te_must_change_password');
       queryClient.clear();
       router.replace("/auth/login");
     },
   });
 
   return {
-    teacher,
+    user,
+    teacher: user, // backward compatibility for existing components
+    role,
     hasToken,
     isAuthenticated,
     isLoading: (hasToken && isLoading) || (requireAuth && !isAuthenticated),
     isError,
     login: loginMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
-    signup: (signupToken: string, data: any) =>
-      signupMutation.mutateAsync({ signupToken, data }),
-    isSigningUp: signupMutation.isPending,
     logout: () => logoutMutation.mutate(),
     isLoggingOut: logoutMutation.isPending,
     refetchProfile: refetch,

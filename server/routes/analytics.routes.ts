@@ -10,12 +10,12 @@ import {
   getWeakStudents,
 } from '../controllers/analytics.controller.js';
 import { authenticate } from '../middleware/authentication.middleware.js';
-import { requireTeacher } from '../middleware/authorization.middleware.js';
+import { requireCoach } from '../middleware/authorization.middleware.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 const router = Router();
 
-router.use(authenticate, requireTeacher);
+router.use(authenticate, requireCoach);
 
 router.get('/dashboard', asyncHandler(getAnalyticsDashboard));
 router.get('/students/top', asyncHandler(getTopStudents));

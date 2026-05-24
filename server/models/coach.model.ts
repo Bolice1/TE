@@ -7,6 +7,9 @@ export interface ICoach {
   coachingName: string;
   phoneNumber?: string;
   password: string;
+  role: 'SUPER_ADMIN' | 'COACH';
+  isActive: boolean;
+  mustChangePassword: boolean;
   isEmailVerified: boolean;
   isDeleted: boolean;
   deletedAt: Date | null;
@@ -43,6 +46,19 @@ const coachSchema = new mongoose.Schema<ICoach>(
     password: {
       type: String,
       required: true,
+    },
+    role: {
+      type: String,
+      enum: ['SUPER_ADMIN', 'COACH'],
+      default: 'COACH',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
     },
     isEmailVerified: {
       type: Boolean,

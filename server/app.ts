@@ -2,6 +2,8 @@ import express from 'express';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 import studentRoutes from './routes/student.routes.js';
 import assignmentRoutes from './routes/assignment.routes.js';
 import marksRoutes from './routes/marks.routes.js';
@@ -39,6 +41,8 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/marks', marksRoutes);

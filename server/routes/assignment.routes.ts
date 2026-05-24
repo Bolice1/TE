@@ -6,11 +6,11 @@ import {
   listCourses,
 } from '../controllers/assignment.controller.js';
 import { authenticate } from '../middleware/authentication.middleware.js';
-import { requireTeacher } from '../middleware/authorization.middleware.js';
+import { requireCoach } from '../middleware/authorization.middleware.js';
 
 const router = Router();
 
-router.use(authenticate, requireTeacher);
+router.use(authenticate, requireCoach);
 router.post('/courses', createCourse);
 router.get('/courses', listCourses);
 router.post('/', createAssignment);

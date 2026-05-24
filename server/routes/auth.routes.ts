@@ -1,19 +1,19 @@
 import { Router } from 'express';
-import { deleteProfile, getProfile, login, logout, registerCoach, update } from '../controllers/auth.controller.js';
-import { requestSignupOtp, verifyOtpCode } from '../controllers/otp.controller.js';
+import { deleteProfile, getProfile, login, logout, update, changePassword } from '../controllers/auth.controller.js';
 import { authenticate } from '../middleware/authentication.middleware.js';
-import { requireTeacher } from '../middleware/authorization.middleware.js';
-import { validateSignupToken } from '../middleware/signup-token.middleware.js';
+import { requireAnyAuth } from '../middleware/authorization.middleware.js';
 
 const router = Router();
 
-router.post('/signup/initiate', requestSignupOtp);
-router.post('/signup/verify', verifyOtpCode);
-router.post('/signup/complete', validateSignupToken, registerCoach);
+// Authentication
 router.post('/login', login);
-router.post('/logout', authenticate, requireTeacher, logout);
-router.get('/me', authenticate, requireTeacher, getProfile);
-router.patch('/me', authenticate, requireTeacher, update);
-router.delete('/me', authenticate, requireTeacher, deleteProfile);
+router.post('/logout', authenticate, requireAnyAuth, logout);
+router.get('/me', authenticate, requireAnyAuth, getProfile);
+router.patch('/me', authenticate, requireAnyAuth, update);
+router.delete('/me', authenticate, requireAnyAuth, deleteProfile);
+
+// Password management
+router.post('/change-password', authenticate, requireAnyAuth, changePassword);
+// TODO: add forgot-password and reset-password controllers
 
 export default router;

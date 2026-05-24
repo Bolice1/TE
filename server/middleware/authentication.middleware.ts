@@ -6,7 +6,7 @@ import envConfiguration from '../config/env.js';
 
 type AuthTokenPayload = {
   userId: string;
-  role: 'teacher';
+  role: 'SUPER_ADMIN' | 'COACH';
   sessionId: string;
 };
 
@@ -20,7 +20,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     const token = authHeader.slice(7);
     const payload = jwt.verify(token, envConfiguration.jwtToken) as AuthTokenPayload;
-    const [teacher, session] = await Promise.all([
+    const [coach, session] = await Promise.all([
       Coach.findOne({
         _id: payload.userId,
         isDeleted: false,
@@ -33,17 +33,22 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       }),
     ]);
 
-    if (!teacher || !session) {
-      return res.status(401).json({ message: 'Teacher account not found.' });
+    if (!coach || !session) {
+      return res.status(401).json({ message: 'Account not found.' });
+    }
+
+    if (typeof coach.isActive !== 'undefined' && coach.isActive === false) {
+      return res.status(403).json({ message: 'Account is deactivated. Contact an administrator.' });
     }
 
     req.user = {
-      id: teacher.id,
-      email: teacher.email,
-      role: 'teacher',
-      name: teacher.name,
-      coachingName: teacher.coachingName,
+      id: coach.id,
+      email: coach.email,
+      role: payload.role,
+      name: coach.name,
+      coachingName: coach.coachingName,
       sessionId: payload.sessionId,
+      isActive: coach.isActive,
     };
 
     next();
