@@ -6,6 +6,7 @@ import { sendOtpEmail } from '../utils/otp.email.js';
 import { getEmailTransportDebugInfo, isEmailTransportConfigured } from '../utils/email.js';
 import { isNonEmptyString, isValidEmail, toTrimmedString } from '../middleware/validation.middleware.js';
 import { deleteOtp, readOtp, storeOtp } from '../utils/otp.store.js';
+import { createSignupToken, deleteSignupTokenByEmail } from '../utils/signup-token.store.js';
 
 export const generateOtp = (): string => {
   return crypto.randomInt(100000, 999999).toString();
@@ -25,7 +26,7 @@ export const requestSignupOtp = async (req: Request, res: Response) => {
 
     const existingTeacher = await Coach.findOne({ email, isDeleted: false });
     if (existingTeacher) {
-      return res.status(409).json({ message: 'A teacher account already exists with that email.' });
+      return res.status(409).json({ message: 'Teacher already exists.' });
     }
 
     if (!isEmailTransportConfigured()) {
@@ -58,7 +59,8 @@ export const requestSignupOtp = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({
-      message: 'OTP sent successfully.',
+      success: true,
+      message: 'Verification OTP code sent to your email.',
       email,
       expiresAt,
       storage: storeResult.backend,
@@ -93,9 +95,17 @@ export const verifyOtpCode = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid or expired OTP.' });
     }
 
+    await deleteOtp({ email, purpose: 'teacher-signup' });
+
+    const signupToken = await createSignupToken({
+      email,
+      ttlMs: envConfiguration.signupTokenExpiresAtMs || 900000,
+    });
+
     return res.status(200).json({
-      message: 'OTP verified successfully.',
       verified: true,
+      signupToken,
+      message: 'OTP verified successfully.',
     });
   } catch (error) {
     return res.status(500).json({

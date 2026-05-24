@@ -64,7 +64,8 @@ export function useAuth(requireAuth = true) {
   });
 
   const signupMutation = useMutation({
-    mutationFn: api.auth.signup,
+    mutationFn: (params: { signupToken: string; data: any }) =>
+      api.auth.signup(params.signupToken, params.data),
     onSuccess: (data) => {
       localStorage.setItem("te_token", data.token);
       localStorage.setItem("te_teacher", JSON.stringify(data.teacher));
@@ -91,7 +92,8 @@ export function useAuth(requireAuth = true) {
     isError,
     login: loginMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
-    signup: signupMutation.mutateAsync,
+    signup: (signupToken: string, data: any) =>
+      signupMutation.mutateAsync({ signupToken, data }),
     isSigningUp: signupMutation.isPending,
     logout: () => logoutMutation.mutate(),
     isLoggingOut: logoutMutation.isPending,

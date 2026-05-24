@@ -11,6 +11,7 @@ export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [signupToken, setSignupToken] = useState<string | null>(null);
 
   // Profile data
   const [name, setName] = useState("");
@@ -44,7 +45,8 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const res = await api.auth.verifyOtp(email, otp);
-      if (res.verified) {
+      if (res.verified && res.signupToken) {
+        setSignupToken(res.signupToken);
         setSuccess("OTP Code verified successfully!");
         setStep(3);
       } else {
@@ -64,15 +66,17 @@ export default function SignupPage() {
       setError("Please fill in all required fields.");
       return;
     }
+    if (!signupToken) {
+      setError("Email verification is required. Please start over.");
+      return;
+    }
     try {
-      await signup({
+      await signup(signupToken, {
         name,
-        email,
         coachingName,
         address,
         phoneNumber: phoneNumber || undefined,
         password,
-        otp,
       });
     } catch (err: any) {
       setError(err.message || "Registration failed.");

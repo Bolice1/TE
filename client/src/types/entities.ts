@@ -230,16 +230,22 @@ export interface OtpRequestResponse {
 export interface OtpVerifyResponse {
   verified: boolean;
   message?: string;
+  signupToken?: string;
+}
+
+export interface SignupTokenResponse {
+  verified: true;
+  signupToken: string;
+  message?: string;
 }
 
 export interface SignupRequest {
-  email: string;
   name: string;
   coachingName: string;
   address: string;
   phoneNumber?: string;
   password: string;
-  otp: string;
+  signupToken: string;
 }
 
 export interface LoginRequest {

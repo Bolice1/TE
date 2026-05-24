@@ -34,6 +34,15 @@ const getAuthHeaders = (extra?: HeadersInit): Headers => {
   }
   return headers;
 };
+
+const getSignupTokenHeaders = (signupToken: string, extra?: HeadersInit): Headers => {
+  const headers = new Headers(extra);
+  headers.set("Authorization", `Bearer ${signupToken}`);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return headers;
+};
 type ApiSuccessEnvelope<T> = {
   success: true;
   message?: string;
@@ -129,6 +138,62 @@ async function request<T>(
   return json as T;
 }
 
+async function requestWithSignupToken<T>(
+  endpoint: string,
+  signupToken: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const headers = getSignupTokenHeaders(signupToken, options.headers);
+  if (options.body instanceof FormData) {
+    headers.delete("Content-Type");
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(buildApiUrl(endpoint), {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    throw new ApiError(
+      `Unable to reach the backend. `, 0,
+    );
+  }
+
+  if (!response.ok) {
+    let errorMsg = "Something went wrong";
+    try {
+      const errBody = await response.json();
+      const hint = typeof errBody.hint === "string" ? errBody.hint : "";
+      errorMsg =
+        (typeof errBody.message === "string" && errBody.message) ||
+        (typeof errBody.msg === "string" && errBody.msg) ||
+        errorMsg;
+      if (hint) {
+        errorMsg = `${errorMsg} ${hint}`.trim();
+      }
+    } catch {
+      // Ignore body parsing failure
+    }
+    throw new ApiError(errorMsg, response.status);
+  }
+
+  const json = await response.json();
+
+  if (
+    json &&
+    typeof json === "object" &&
+    "success" in json &&
+    (json as { success?: unknown }).success === true &&
+    "data" in json
+  ) {
+    return (json as ApiSuccessEnvelope<T>).data;
+  }
+
+  return json as T;
+}
+
 export async function fetchAuthenticated(
   endpoint: string,
   options: RequestInit = {}
@@ -190,17 +255,17 @@ export interface GlobalFilters {
 export const api = {
   auth: {
     requestOtp: (email: string) =>
-      request<OtpRequestResponse>("/auth/otp/request", {
+      request<OtpRequestResponse>("/auth/signup/initiate", {
         method: "POST",
         body: JSON.stringify({ email }),
       }),
     verifyOtp: (email: string, otp: string) =>
-      request<OtpVerifyResponse>("/auth/otp/verify", {
+      request<OtpVerifyResponse>("/auth/signup/verify", {
         method: "POST",
         body: JSON.stringify({ email, otp }),
       }),
-    signup: (data: any) =>
-      request<AuthResponse>("/auth/signup", {
+    signup: (signupToken: string, data: Omit<any, "signupToken">) =>
+      requestWithSignupToken<AuthResponse>("/auth/signup/complete", signupToken, {
         method: "POST",
         body: JSON.stringify(data),
       }),
