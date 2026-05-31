@@ -120,6 +120,16 @@ export const deleteStudent = async(req:Request,res:Response)=>{
 
   try{
 
+    const studentId = req.body.studentId;
+
+    const studentExists = Student.findOne({studentId});
+    if(!studentExists)return res.status(400).json({msg:"student not found"})
+    
+    const studentDeleted = await Student.findOneAndDelete({studentId});
+
+    return res.status(200).json({msg:"student deleted"})
+
+
   }catch(error){
     console.error(error)
   }
