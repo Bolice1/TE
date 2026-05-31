@@ -115,3 +115,13 @@ export const listStudents = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const deleteStudent = async(req:Request,res:Response)=>{
+
+  try{
+
+  }catch(error){
+    console.error(error)
+  }
+
+}
