@@ -44,8 +44,7 @@ const run = async () => {
       mustChangePassword: true,
     });
 
-    console.log('Created Super Admin:', admin.email);
-    console.log('Password:', passwordToUse);
+    console.log('Created Super Admin:');
     process.exit(0);
   } catch (err) {
     console.error('Failed to seed admin:', err);
